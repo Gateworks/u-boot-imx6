@@ -1,0 +1,35 @@
+U-Boot for the Gateworks Ventana Product Family boards
+
+This file contains information for the port of U-Boot to the Gateworks
+Ventana Product family boards.
+
+1. Boot source, boot from NAND
+------------------------------
+
+The i.MX6 BOOT ROM expects some headers that provide details of NAND layout
+and bad block information (referred to as 'bootstreams') which are replicated
+multiple times in NAND. The number of replications is configurable through
+board strapping options and eFUSE settings.  The Freescale 'kobs-ng'
+application from the Freescale LTIB BSP, which runs under Linux, must be used
+to program the bootstream in order to setup the replicated headers correctly.
+
+The Gateworks Ventana boards with NAND flash have been factory programmed
+such that their eFUSE settings expect 2 copies of the boostream (this is
+specified by providing kobs-ng with the --search_exponent=1 argument). Once in
+Linux with MTD support for the NAND on /dev/mtd0 you can program the boostream
+with:
+
+kobs-ng init -v -x --search_exponent=1 u-boot.imx
+
+This information is taken from
+
+https://trac.gateworks.com/wiki/ventana%3Abuild_uboot
+
+2. Build
+--------
+
+To build U-Boot for the SabreLite board:
+
+ make gw_ventana_config
+ make u-boot.imx
+

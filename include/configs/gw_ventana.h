@@ -1,0 +1,329 @@
+/*
+ * Copyright (C) 2013 Gateworks Corporation
+ *
+ * Configuration settings for the Freescale i.MX6Q Sabre Lite board.
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation; either version 2 of
+ * the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.		See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+ * MA 02111-1307 USA
+ */
+
+/**
+ * Gateworks Ventana board config - NAND based boot device
+ */
+#ifndef __CONFIG_H
+#define __CONFIG_H
+
+#define CONFIG_MX6
+#define CONFIG_DISPLAY_CPUINFO   /* display cpu info */
+#define CONFIG_DISPLAY_BOARDINFO /* display board info */
+
+#define CONFIG_MACH_TYPE	4520   /* Gateworks Ventana Platform */
+
+#include <asm/arch/imx-regs.h>
+#include <asm/imx-common/gpio.h>
+
+/* ATAGs */
+#define CONFIG_CMDLINE_TAG
+#define CONFIG_SETUP_MEMORY_TAGS
+#define CONFIG_INITRD_TAG
+#define CONFIG_SERIAL_TAG
+#define CONFIG_REVISION_TAG
+
+/* Size of malloc() pool */
+#define CONFIG_SYS_MALLOC_LEN		(10 * 1024 * 1024)
+
+/* Init Functions */
+#define CONFIG_BOARD_EARLY_INIT_F
+#define CONFIG_MISC_INIT_R
+
+/* GPIO */
+#define CONFIG_MXC_GPIO
+
+/* Serial */
+#define CONFIG_MXC_UART
+#define CONFIG_MXC_UART_BASE	       UART2_BASE
+
+/* I2C Configs */
+#define CONFIG_CMD_I2C
+#define CONFIG_I2C_MULTI_BUS
+#define CONFIG_I2C_MXC
+#define CONFIG_SYS_I2C_SPEED		          100000
+
+/* PWM Configs */
+#define CONFIG_IMX_PWM
+#define IMX_PWM1_BASE    PWM1_BASE_ADDR
+#define IMX_PWM2_BASE    PWM2_BASE_ADDR
+#define IMX_PWM3_BASE    PWM3_BASE_ADDR
+#define IMX_PWM4_BASE    PWM4_BASE_ADDR
+
+/* MMC Configs */
+#define CONFIG_FSL_ESDHC
+#define CONFIG_FSL_USDHC
+#define CONFIG_SYS_FSL_ESDHC_ADDR      0
+#define CONFIG_SYS_FSL_USDHC_NUM       1
+#define CONFIG_MMC
+#define CONFIG_CMD_MMC
+#define CONFIG_GENERIC_MMC
+#define CONFIG_BOUNCE_BUFFER
+
+/* Filesystem support */
+#define CONFIG_CMD_EXT2
+#define CONFIG_CMD_FAT
+#define CONFIG_CMD_UBIFS
+#define CONFIG_DOS_PARTITION
+
+/*
+ * SATA Configs
+ */
+#define CONFIG_CMD_SATA
+#ifdef CONFIG_CMD_SATA
+  #define CONFIG_DWC_AHSATA
+  #define CONFIG_SYS_SATA_MAX_DEVICE	1
+  #define CONFIG_DWC_AHSATA_PORT_ID	0
+  #define CONFIG_DWC_AHSATA_BASE_ADDR	SATA_ARB_BASE_ADDR
+  #define CONFIG_LBA48
+  #define CONFIG_LIBATA
+#endif
+
+/* Various command support */
+#include <config_cmd_default.h>
+#undef CONFIG_CMD_IMLS
+#define CONFIG_CMD_PING
+#define CONFIG_CMD_DHCP
+#define CONFIG_CMD_MII
+#define CONFIG_CMD_NET
+#define CONFIG_CMD_BMODE         /* set eFUSE shadow for a boot dev and reset */
+#define CONFIG_CMD_HDMIDETECT    /* detect HDMI output device */
+#define CONFIG_CMD_SETEXPR
+#define CONFIG_CMD_BOOTZ
+#define CONFIG_CMD_GSC
+#define CONFIG_CMD_UBI
+#define CONFIG_RBTREE
+#define CONFIG_LZO
+#define CONFIG_CMD_FUSE          /* eFUSE read/write support */
+#ifdef CONFIG_CMD_FUSE
+#define CONFIG_MXC_OCOTP
+#endif
+
+
+/* Ethernet support */
+#define CONFIG_FEC_MXC
+#define CONFIG_MII
+#define IMX_FEC_BASE             ENET_BASE_ADDR
+#define CONFIG_FEC_XCV_TYPE      RGMII
+#define CONFIG_ETHPRIME          "FEC"
+#define CONFIG_FEC_MXC_PHYADDR   0
+#define CONFIG_PHYLIB
+#define CONFIG_ARP_TIMEOUT       200UL
+
+/* USB Configs */
+#define CONFIG_CMD_USB
+#define CONFIG_USB_EHCI
+#define CONFIG_USB_EHCI_MX6
+#define CONFIG_USB_STORAGE
+#define CONFIG_USB_HOST_ETHER
+#define CONFIG_USB_ETHER_ASIX
+#define CONFIG_USB_ETHER_SMSC95XX
+#define CONFIG_MXC_USB_PORT       1
+#define CONFIG_MXC_USB_PORTSC     (PORT_PTS_UTMI | PORT_PTS_PTW)
+#define CONFIG_MXC_USB_FLAGS      0
+
+/* Framebuffer and LCD */
+#define CONFIG_VIDEO
+#define CONFIG_VIDEO_IPUV3
+#define CONFIG_CFB_CONSOLE
+#define CONFIG_VGA_AS_SINGLE_DEVICE
+#define CONFIG_SYS_CONSOLE_IS_IN_ENV
+#define CONFIG_SYS_CONSOLE_OVERWRITE_ROUTINE
+#define CONFIG_VIDEO_BMP_RLE8
+#define CONFIG_SPLASH_SCREEN
+#define CONFIG_BMP_16BPP
+#define CONFIG_VIDEO_LOGO
+#define CONFIG_IPUV3_CLK          260000000
+
+/* serial console (ttymxc1,115200) */
+#define CONFIG_CONS_INDEX         1
+
+/* Miscellaneous configurable options */
+#define CONFIG_SYS_LONGHELP
+#define CONFIG_SYS_HUSH_PARSER
+#define CONFIG_SYS_PROMPT	             "Ventana > "
+#define CONFIG_SYS_CBSIZE	             512
+#define CONFIG_AUTO_COMPLETE
+#define CONFIG_CMDLINE_EDITING
+#define CONFIG_HWCONFIG
+
+/* Print Buffer Size */
+#define CONFIG_SYS_PBSIZE (CONFIG_SYS_CBSIZE + sizeof(CONFIG_SYS_PROMPT) + 16)
+#define CONFIG_SYS_MAXARGS	       16
+#define CONFIG_SYS_BARGSIZE CONFIG_SYS_CBSIZE
+
+/* Memory configuration */
+#define CONFIG_SYS_MEMTEST_START       0x10000000
+#define CONFIG_SYS_MEMTEST_END	       0x10010000
+#define CONFIG_SYS_TEXT_BASE	         0x17800000
+#define CONFIG_SYS_LOAD_ADDR           0x10800000
+#define CONFIG_SYS_HZ                  1000
+
+/* Physical Memory Map */
+#define CONFIG_NR_DRAM_BANKS           1
+#define PHYS_SDRAM                     MMDC0_ARB_BASE_ADDR
+#define PHYS_SDRAM_SIZE                (1u * 1024 * 1024 * 1024)
+
+#define CONFIG_SYS_SDRAM_BASE          PHYS_SDRAM
+#define CONFIG_SYS_INIT_RAM_ADDR       IRAM_BASE_ADDR
+#define CONFIG_SYS_INIT_RAM_SIZE       IRAM_SIZE
+
+#define CONFIG_SYS_INIT_SP_OFFSET \
+       (CONFIG_SYS_INIT_RAM_SIZE - GENERATED_GBL_DATA_SIZE)
+#define CONFIG_SYS_INIT_SP_ADDR \
+       (CONFIG_SYS_INIT_RAM_ADDR + CONFIG_SYS_INIT_SP_OFFSET)
+
+/* FLASH and environment organization */
+#define CONFIG_SYS_NO_FLASH  /* no NOR flash */
+
+/*
+ * MTD Command for mtdparts
+ */
+#define CONFIG_CMD_MTDPARTS
+#define CONFIG_MTD_DEVICE
+//#define CONFIG_FLASH_CFI_MTD
+#define CONFIG_MTD_PARTITIONS
+#define MTDIDS_DEFAULT    "nand0=nand"
+#define MTDPARTS_DEFAULT  "mtdparts=nand:16m(uboot),1m(env),-(rootfs)"
+
+/* Enable NAND support */
+#define CONFIG_CMD_TIME
+#define CONFIG_CMD_NAND
+#define CONFIG_CMD_NAND_TRIMFFS
+#ifdef CONFIG_CMD_NAND
+  #define CONFIG_NAND_MXS
+  #define CONFIG_SYS_MAX_NAND_DEVICE	1
+  #define CONFIG_SYS_NAND_BASE		0x40000000
+  #define CONFIG_SYS_NAND_5_ADDR_CYCLE
+  #define CONFIG_SYS_NAND_ONFI_DETECTION
+
+  /* DMA stuff, needed for GPMI/MXS NAND support */
+  #define CONFIG_APBH_DMA
+  #define CONFIG_APBH_DMA_BURST
+  #define CONFIG_APBH_DMA_BURST8
+#endif
+
+/* Persistent Environment Config */
+#define CONFIG_ENV_OVERWRITE    /* allow to overwrite serial and ethaddr */
+//#define CONFIG_ENV_IS_IN_MMC
+#define CONFIG_ENV_IS_IN_NAND
+#if defined(CONFIG_ENV_IS_IN_MMC)
+  #define CONFIG_ENV_OFFSET              (6 * 64 * 1024)
+  #define CONFIG_ENV_SIZE                (8 * 1024)
+  #define CONFIG_SYS_MMC_ENV_DEV         0
+#elif defined(CONFIG_ENV_IS_IN_NAND)
+  #define CONFIG_ENV_OFFSET              (16 << 20)
+  #define CONFIG_ENV_SECT_SIZE           (128 << 10)
+  #define CONFIG_ENV_SIZE                CONFIG_ENV_SECT_SIZE
+  #define CONFIG_ENV_OFFSET_REDUND       (CONFIG_ENV_OFFSET + (512 << 10))
+  #define CONFIG_ENV_SIZE_REDUND         CONFIG_ENV_SIZE
+#endif
+
+/* Environment */
+#define CONFIG_BAUDRATE           115200
+#define CONFIG_BOOTDELAY          3
+#define CONFIG_LOADADDR           CONFIG_SYS_LOAD_ADDR
+#define CONFIG_IPADDR             192.168.1.1
+#define CONFIG_SERVERIP           192.168.1.146
+
+#define CONFIG_EXTRA_ENV_SETTINGS \
+	"script=boot/6x_bootscript-ventana\0" \
+	"uimage=boot/uImage\0" \
+	"console=ttymxc1\0" \
+	"fdt_high=0xffffffff\0" \
+	"fdt_addr=0x11000000\0" \
+	"hwconfig=rs232;" \
+		"dio0:mode=gpio;dio1:mode=gpio;dio2:mode=gpio;dio3:mode=gpio\0" \
+	"video=\0" \
+	"image_rootfs=openwrt-imx61-root.ubi\0" \
+	\
+	"mtdparts=" MTDPARTS_DEFAULT "\0" \
+	"mtdids=" MTDIDS_DEFAULT "\0" \
+	\
+	"nand_loadfdt=" \
+		"if ubifsload ${fdt_addr} boot/${fdt_file}; then " \
+			"echo Loaded DTB from boot/${fdt_file}; " \
+		"else " \
+			"if ubifsload ${fdt_addr} boot/${fdt_file1}; then " \
+				"echo Loaded DTB from boot/${fdt_file1}; " \
+			"else " \
+				"if ubifsload ${fdt_addr} boot/${fdt_file2}; then " \
+					"echo Loaded DTB from boot/${fdt_file2}; " \
+				"fi; " \
+			"fi; " \
+		"fi\0" \
+	\
+	"nand_boot=" \
+		"ubi part rootfs && ubifsmount ubi0:rootfs; " \
+		"run nand_loadfdt && fdt addr ${fdt_addr} && fdt boardsetup; " \
+		"if ubifsload ${loadaddr} ${uimage}; then " \
+			"echo Booting from NAND flashs...; " \
+			"ubifsumount; " \
+			"setenv bootargs console=${console},${baudrate} " \
+				"root=ubi0:rootfs ubi.mtd=2 rootfstype=ubifs ${video} ${extra}; " \
+			"bootm ${loadaddr} - ${fdt_addr}; " \
+		"fi\0" \
+	"nand_update=echo Updating NAND from ${serverip}:${image_rootfs} ...; " \
+		"tftp ${loadaddr} ${image_rootfs} && " \
+		"nand erase.part rootfs && " \
+		"nand write ${loadaddr} rootfs ${filesize}\0" \
+	\
+	"mmc_root=/dev/mmcblk0p1 rootfstype=ext4 rootwait rw\0" \
+	"mmc_loaduimage=ext2load mmc 0:1 ${loadaddr} ${uimage}\0" \
+	"mmc_loadfdt=" \
+		"if ext2load mmc 0:1 ${fdt_addr} boot/${fdt_file}; then " \
+			"echo Loaded DTB from boot/${fdt_file}; " \
+		"else " \
+			"if ext2load mmc 0:1 ${fdt_addr} boot/${fdt_file1}; then " \
+				"echo Loaded DTB from boot/${fdt_file1}; " \
+			"else " \
+				"if ext2load mmc 0:1 ${fdt_addr} boot/${fdt_file2}; then " \
+					"echo Loaded DTB from boot/${fdt_file2}; " \
+				"fi; " \
+			"fi; " \
+		"fi\0" \
+	"mmc_boot=mmc dev 0 && mmc rescan && " \
+		"if ext2load mmc 0:1 ${loadaddr} ${script}; then " \
+			"source; " \
+		"else " \
+			"ext2load mmc 0:1 ${loadaddr} ${uimage} && " \
+			"echo 'Booting from mmc...'; "\
+			"setenv bootargs console=${console},${baudrate} " \
+				"root=/dev/mmcblk0p1 rootfstype=ext4 rootwait rw ${video} ${extra}; " \
+			"if run mmc_loadfdt && fdt addr ${fdt_addr} && fdt boardsetup; then " \
+				"bootm ${loadaddr} - ${fdt_addr}; " \
+			"else " \
+				"bootm; " \
+			"fi; " \
+		"fi\0"
+
+#define CONFIG_BOOTCOMMAND "if run mmc_boot; then; else run nand_boot; fi"
+
+/* Device Tree Support */
+#define CONFIG_OF_BOARD_SETUP
+#define CONFIG_OF_LIBFDT
+#define CONFIG_FDT_FIXUP_PARTITIONS
+
+#ifndef CONFIG_SYS_DCACHE_OFF
+  #define CONFIG_CMD_CACHE
+#endif
+
+#endif			       /* __CONFIG_H */

@@ -1351,6 +1351,10 @@ Dimitar Penev <dpn@switchfin.org>
 	BR4 Appliance	BF537
 	PR1 Appliance	BF537
 
+Tim Harvey <tharvey@gateworks.com>
+
+	gw_ventana      i.MX6Q
+
 #########################################################################
 # NDS32 Systems:							#
 #									#
