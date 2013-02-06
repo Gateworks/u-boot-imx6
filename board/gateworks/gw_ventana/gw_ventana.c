@@ -76,7 +76,7 @@ int dram_init(void)
 iomux_v3_cfg_t const uart1_pads[] = {
 	MX6Q_PAD_SD3_DAT6__UART1_RXD | MUX_PAD_CTRL(UART_PAD_CTRL),
 	MX6Q_PAD_SD3_DAT7__UART1_TXD | MUX_PAD_CTRL(UART_PAD_CTRL),
-//	MX6Q_PAD_EIM_D24__UART1_DTR | MUX_PAD_CTRL(UART_PAD_CTRL),
+	MX6Q_PAD_EIM_D24__UART1_DTR | MUX_PAD_CTRL(UART_PAD_CTRL),
 };
 
 /* UART2, Console */
@@ -201,6 +201,7 @@ static void setup_iomux_enet(void)
 {
 	imx_iomux_v3_setup_multiple_pads(enet_pads, ARRAY_SIZE(enet_pads));
 
+	/* toggle PHY_RST# */
 	gpio_direction_output(IMX_GPIO_NR(1, 30), 0);
 	mdelay(2);
 	gpio_set_value(IMX_GPIO_NR(1, 30), 1);
@@ -253,35 +254,34 @@ int board_mmc_getcd(struct mmc *mmc)
 
 int board_mmc_init(bd_t *bis)
 {
-       s32 status = 0;
-       u32 index = 0;
+	s32 status = 0;
+	u32 index = 0;
 
 	usdhc_cfg[0].sdhc_clk = mxc_get_clock(MXC_ESDHC3_CLK);
-	usdhc_cfg[1].sdhc_clk = mxc_get_clock(MXC_ESDHC4_CLK);
 
-       for (index = 0; index < CONFIG_SYS_FSL_USDHC_NUM; ++index) {
-	       switch (index) {
-	       case 0:
-		       imx_iomux_v3_setup_multiple_pads(
-			       usdhc3_pads, ARRAY_SIZE(usdhc3_pads));
-		       break;
-	       default:
-		       printf("Warning: you configured more USDHC controllers"
-			       "(%d) then supported by the board (%d)\n",
-			       index + 1, CONFIG_SYS_FSL_USDHC_NUM);
-		       return status;
-	       }
+	for (index = 0; index < CONFIG_SYS_FSL_USDHC_NUM; ++index) {
+		switch (index) {
+			case 0:
+				imx_iomux_v3_setup_multiple_pads(
+					usdhc3_pads, ARRAY_SIZE(usdhc3_pads));
+				break;
+			default:
+				printf("Warning: you configured more USDHC controllers"
+					"(%d) then supported by the board (%d)\n",
+					index + 1, CONFIG_SYS_FSL_USDHC_NUM);
+				return status;
+		}
 
-	       status |= fsl_esdhc_initialize(bis, &usdhc_cfg[index]);
-       }
+		status |= fsl_esdhc_initialize(bis, &usdhc_cfg[index]);
+	}
 
-       return status;
+	return status;
 }
 #endif
 
 u32 get_board_rev(void)
 {
-	return 0x63000 ;
+	return 0x00000 ;
 }
 
 #ifdef CONFIG_MXC_SPI
@@ -346,10 +346,9 @@ static void setup_gpio(void)
 	gpio_direction_output(IMX_GPIO_NR(4, 6), 1);  // grn
 }
 
-#if 1
 int setup_pcie(void)
 {
-	/* PCIe */
+	/* enable clock and toggle PCI_RST# */
 	gpio_direction_output(IMX_GPIO_NR(1, 29), 0); // PCIESWT_RST#
 	gpio_direction_output(IMX_GPIO_NR(1, 20), 1); // PCIECK_SSON
 
@@ -358,7 +357,6 @@ int setup_pcie(void)
 
 	return 0;
 }
-#endif
 
 #ifdef CONFIG_CMD_SATA
 
@@ -399,13 +397,23 @@ static iomux_v3_cfg_t const backlight_pads[] = {
 #define LVDS_BACKLIGHT_GP IMX_GPIO_NR(1, 10)
 };
 
-#if 0
-static iomux_v3_cfg_t const rgb_pads[] = {
+/* Parallel RGB Input (Analog Video In) */
+static iomux_v3_cfg_t const vidin_pads[] = {
+	MX6Q_PAD_EIM_DA2__IPU2_CSI1_D_7,
+	MX6Q_PAD_EIM_DA3__IPU2_CSI1_D_6,
+	MX6Q_PAD_EIM_DA4__IPU2_CSI1_D_5,
+	MX6Q_PAD_EIM_DA5__IPU2_CSI1_D_4,
+	MX6Q_PAD_EIM_DA6__IPU2_CSI1_D_3,
+	MX6Q_PAD_EIM_DA7__IPU2_CSI1_D_2,
+	MX6Q_PAD_EIM_DA8__IPU2_CSI1_D_1,
+	MX6Q_PAD_EIM_DA9__IPU2_CSI1_D_0,
+};
+
+/* Parallel RGB Output (Analog Video Out) */
+static iomux_v3_cfg_t const vidout_pads[] = {
 	MX6Q_PAD_DI0_DISP_CLK__IPU1_DI0_DISP_CLK,
-	MX6Q_PAD_DI0_PIN15__IPU1_DI0_PIN15,
 	MX6Q_PAD_DI0_PIN2__IPU1_DI0_PIN2,
 	MX6Q_PAD_DI0_PIN3__IPU1_DI0_PIN3,
-	MX6Q_PAD_DI0_PIN4__GPIO_4_20,
 	MX6Q_PAD_DISP0_DAT0__IPU1_DISP0_DAT_0,
 	MX6Q_PAD_DISP0_DAT1__IPU1_DISP0_DAT_1,
 	MX6Q_PAD_DISP0_DAT2__IPU1_DISP0_DAT_2,
@@ -422,16 +430,7 @@ static iomux_v3_cfg_t const rgb_pads[] = {
 	MX6Q_PAD_DISP0_DAT13__IPU1_DISP0_DAT_13,
 	MX6Q_PAD_DISP0_DAT14__IPU1_DISP0_DAT_14,
 	MX6Q_PAD_DISP0_DAT15__IPU1_DISP0_DAT_15,
-	MX6Q_PAD_DISP0_DAT16__IPU1_DISP0_DAT_16,
-	MX6Q_PAD_DISP0_DAT17__IPU1_DISP0_DAT_17,
-	MX6Q_PAD_DISP0_DAT18__IPU1_DISP0_DAT_18,
-	MX6Q_PAD_DISP0_DAT19__IPU1_DISP0_DAT_19,
-	MX6Q_PAD_DISP0_DAT20__IPU1_DISP0_DAT_20,
-	MX6Q_PAD_DISP0_DAT21__IPU1_DISP0_DAT_21,
-	MX6Q_PAD_DISP0_DAT22__IPU1_DISP0_DAT_22,
-	MX6Q_PAD_DISP0_DAT23__IPU1_DISP0_DAT_23,
 };
-#endif // #if 0
 
 struct display_info_t {
 	int	bus;
@@ -445,6 +444,7 @@ struct display_info_t {
 
 static int detect_hdmi(struct display_info_t const *dev)
 {
+printf("%s: %d\n", __func__, __raw_readb(HDMI_ARB_BASE_ADDR+HDMI_PHY_STAT0) & HDMI_PHY_HPD);
 	return __raw_readb(HDMI_ARB_BASE_ADDR+HDMI_PHY_STAT0) & HDMI_PHY_HPD;
 }
 
@@ -475,6 +475,7 @@ static void enable_hdmi(struct display_info_t const *dev)
 
 static int detect_i2c(struct display_info_t const *dev)
 {
+printf("%s bus=%d addr=0x%02x\n", __func__, dev->bus, dev->addr);
 	return ((0 == i2c_set_bus_num(dev->bus))
 		&&
 		(0 == i2c_probe(dev->addr)));
@@ -484,21 +485,19 @@ static void enable_lvds(struct display_info_t const *dev)
 {
 	struct iomuxc *iomux = (struct iomuxc *)
 				IOMUXC_BASE_ADDR;
+printf("%s\n", __func__);
 	u32 reg = readl(&iomux->gpr[2]);
 	reg |= IOMUXC_GPR2_DATA_WIDTH_CH0_24BIT;
 	writel(reg, &iomux->gpr[2]);
 	gpio_direction_output(LVDS_BACKLIGHT_GP, 1);
 }
 
-#if 0
-static void enable_rgb(struct display_info_t const *dev)
+static void enable_vidout(struct display_info_t const *dev)
 {
 	imx_iomux_v3_setup_multiple_pads(
-		rgb_pads,
-		 ARRAY_SIZE(rgb_pads));
-	gpio_direction_output(MIPI_BACKLIGHT_GP, 1);
+		vidout_pads,
+		 ARRAY_SIZE(vidout_pads));
 }
-#endif
 
 static struct display_info_t const displays[] = {{
 	.bus	= -1,
@@ -521,7 +520,7 @@ static struct display_info_t const displays[] = {{
 		.sync           = FB_SYNC_EXT,
 		.vmode          = FB_VMODE_NONINTERLACED
 } }, {
-	.bus	= 2,
+	.bus	= 3,
 	.addr	= 0x4,
 	.pixfmt	= IPU_PIX_FMT_LVDS666,
 	.detect	= detect_i2c,
@@ -541,7 +540,7 @@ static struct display_info_t const displays[] = {{
 		.sync           = FB_SYNC_EXT,
 		.vmode          = FB_VMODE_NONINTERLACED
 } }, {
-	.bus	= 2,
+	.bus	= 3,
 	.addr	= 0x38,
 	.pixfmt	= IPU_PIX_FMT_LVDS666,
 	.detect	= detect_i2c,
@@ -560,13 +559,12 @@ static struct display_info_t const displays[] = {{
 		.vsync_len      = 10,
 		.sync           = FB_SYNC_EXT,
 		.vmode          = FB_VMODE_NONINTERLACED
-#if 0
 } }, {
-	.bus	= 2,
-	.addr	= 0x48,
+	.bus	= 3,
+	.addr	= 0x2a,
 	.pixfmt	= IPU_PIX_FMT_RGB666,
 	.detect	= detect_i2c,
-	.enable	= enable_rgb,
+	.enable	= enable_vidout,
 	.mode	= {
 		.name           = "wvga-rgb",
 		.refresh        = 57,
@@ -581,7 +579,6 @@ static struct display_info_t const displays[] = {{
 		.vsync_len      = 10,
 		.sync           = 0,
 		.vmode          = FB_VMODE_NONINTERLACED
-#endif
 } } };
 
 int board_video_skip(void)
@@ -851,12 +848,40 @@ static const struct boot_mode board_boot_modes[] = {
 
 int misc_init_r(void)
 {
+
+/*
+printf("%s\n", __func__);
+while (1) {
+	mdelay(500);
+	gpio_set_value(IMX_GPIO_NR(4, 15), 1);
+	mdelay(500);
+	gpio_set_value(IMX_GPIO_NR(4, 15), 0);
+}
+*/
+
 // set/override envs
-setenv("ethaddr", "ae:30:32:84:fd:02"); // from tools/gen_eth_addr
+setenv("ethaddr", "ae:30:32:84:fd:02"); // generated from tools/gen_eth_addr
 setenv("serverip", "192.168.1.146");
 //setenv("ipaddr", "192.168.1.88");
-setenv("bootnet", "setenv ipaddr 192.168.1.88; ping 192.168.1.146; tftp 0x10800000 ventana/uImage; setenv bootargs 'console=ttymxc1,115200 root=/dev/ram0 rootfstype=ramfs mem=32M'; bootm");
+//setenv("bootargs", "console=ttymxc1,115200 root=/dev/mmcblk0p1 rootfstype=ext4 rootwait debug arm_freq=1200");
+//setenv("bootargs", "console=ttymxc1,115200 root=/dev/sda1 rootfstype=ext4 rootwait debug");
+setenv("bootargs", "console=ttymxc1,115200 root=/dev/sda2 rootfstype=ext3 rootwait debug");
+//setenv("bootargs", "console=ttymxc1,115200 root=/dev/ram0 rootfstype=ramfs debug");
+//setenv("image", "ventana/uImage-ltib");
+setenv("image", "ventana/uImage");
+setenv("bootnet", "tftp 0x10800000 ${image}; bootm 0x10800000");
+//setenv("bootcmd", "");
 setenv("bootcmd", "run bootnet");
+//setenv("bootcmd", "usb start; ext2load usb 0:2 0x10800000 uImage; bootm 0x10800000");
+
+setenv("bootltib", "setenv bootargs 'console=ttymxc1,115200 root=/dev/mmcblk0p1 rootfstype=ext4 debug'; mmc dev 0; ext2load mmc 0 0x10800000 /boot/uImage; bootm 0x10800000");
+setenv("bootltib_net", "tftp 0x10800000 ventana/uImage-ltib; setenv bootargs 'console=ttymxc1,115200 root=/dev/mmcblk0p1 rootfstype=ext4 debug'; bootm 0x10800000");
+
+setenv("bootowrt", "setenv bootargs 'console=ttymxc1,115200 root=/dev/ram0 rootfstype=ramfs debug'; mmc dev 0; ext2load mmc 0 0x10800000 /boot/openwrt-imx61-uImage-gw5400; bootm 0x10800000");
+setenv("bootowrt_net", "tftp 0x10800000 ventana/openwrt-imx61-uImage-gw5400; setenv bootargs 'console=ttymxc1,115200 root=/dev/ram0 rootfstype=ramfs debug'; bootm 0x10800000");
+
+setenv("bootfoo", "setenv bootargs 'console=ttymxc1,115200 root=/dev/ram0 rootfstype=ramfs debug'; tftp 0x10800000 ventana/uImage-foo; bootm 0x10800000");
+
 #ifdef CONFIG_PREBOOT
 	preboot_keys();
 #endif
