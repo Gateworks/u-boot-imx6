@@ -74,6 +74,13 @@
 #define IMX_OTPWRITE_ENABLED
 #endif
 
+/* PWM Configs */
+#define CONFIG_IMX_PWM
+#define IMX_PWM1_BASE    PWM1_BASE_ADDR
+#define IMX_PWM2_BASE    PWM2_BASE_ADDR
+#define IMX_PWM3_BASE    PWM3_BASE_ADDR
+#define IMX_PWM4_BASE    PWM4_BASE_ADDR
+
 /* MMC Configs */
 #define CONFIG_FSL_ESDHC
 #define CONFIG_FSL_USDHC
@@ -164,14 +171,6 @@
 #define CONFIG_SYS_TEXT_BASE	       0x17800000
 
 #define CONFIG_EXTRA_ENV_SETTINGS \
-	"serverip=192.168.1.146\0" \
-	"ipaddr=192.168.1.89\0" \
-	"updateuboot=echo Updating uboot from ${serverip}:ventana/u-boot.imx ...; "\
-		"tftpboot 0x10800000 ventana/u-boot.imx; " \
-		"sf probe; " \
-		"sf erase 0 0x80000; " \
-		"sf write 0x10800000 0x400 ${filesize}\0" \
-	\
 	"script=boot.scr\0" \
 	"uimage=uImage\0" \
 	"console=ttymxc1\0" \
@@ -230,7 +229,33 @@
 			"fi; " \
 		"else " \
 			"bootm; " \
-		"fi;\0"
+		"fi;\0" \
+\
+	"serverip=192.168.1.146\0" \
+	"ipaddr=192.168.1.1\0" \
+	"ethaddr=00:D0:12:30:EE:FA\0" \
+	"clearenv=sf probe && sf erase 0x80000 0x2000 && echo resotred environment to factory defaults\0" \
+	"bootcmd=tftp 0x10800000 ${image}; " \
+		"setenv bootargs console=${console},${baudrate} root=${root} ${video} ${debug}; " \
+		"bootm\0" \
+	"updateuboot=echo Updating uboot from ${serverip}:ventana/u-boot.imx ...; "\
+		"tftpboot 0x10800000 ventana/u-boot.imx && " \
+		"sf probe && " \
+		"sf erase 0 0x80000 && " \
+		"sf write 0x10800000 0x400 ${filesize}\0" \
+	"root=/dev/mmcblk0p2 rootwait rw\0" \
+	"video=\0" \
+	"image=ventana/uImage\0" \
+	"debug=debug\0" \
+	\
+	"bootnet=tftp 0x10800000 ${image}; " \
+		"setenv bootargs console=${console},${baudrate} root=${root} ${video} ${debug}; " \
+		"bootm\0" \
+	\
+	"bootltib=setenv bootargs console=${console},${baudrate} root=/dev/mmcblk0p1 rootfstype=ext4 debug; mmc dev 0; ext2load mmc 0 0x10800000 /boot/uImage; bootm\0" \
+	"bootltib_net=tftp 0x10800000 ventana/uImage-ltib; setenv bootargs console=ttymxc1,115200 root=/dev/mmcblk0p1 rootfstype=ext4 debug; bootm\n" \
+	"bootowrt=setenv bootargs console=${console},${baudrate} root=/dev/ram0 rootfstype=ramfs debug; mmc dev 0; ext2load mmc 0 0x10800000 /boot/openwrt-imx61-uImage-gw5400; bootm\0" \
+	"bootowrt_net=tftp 0x10800000 ventana/openwrt-imx61-uImage-gw5400; setenv bootargs console=${console},${baudrate} root=/dev/ram0 rootfstype=ramfs debug; bootm\0"
 
 #define CONFIG_BOOTCOMMAND \
 	   "mmc dev ${mmcdev};" \
