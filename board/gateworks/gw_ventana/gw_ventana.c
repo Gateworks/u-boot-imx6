@@ -31,6 +31,7 @@
 #include <asm/imx-common/iomux-v3.h>
 #include <asm/imx-common/mxc_i2c.h>
 #include <asm/imx-common/boot_mode.h>
+#include <asm/imx-common/imx_pwm.h>
 #include <mmc.h>
 #include <fsl_esdhc.h>
 #include <micrel.h>
@@ -169,11 +170,22 @@ iomux_v3_cfg_t const enet_pads[] = {
 
 /* GPIO assignments */
 static iomux_v3_cfg_t const gpio_pads[] = {
-	// MX6_DIO0-3
-	MX6Q_PAD_GPIO_9__GPIO_1_9 | MUX_PAD_CTRL(NO_PAD_CTRL),
-	MX6Q_PAD_SD1_DAT2__GPIO_1_19 | MUX_PAD_CTRL(NO_PAD_CTRL),
+	// MX6_DIO0
+	//MX6Q_PAD_GPIO_9__GPIO_1_9 | MUX_PAD_CTRL(NO_PAD_CTRL),
+	MX6Q_PAD_GPIO_9__PWM1_PWMO | MUX_PAD_CTRL(NO_PAD_CTRL),
+
+	// MX6_DIO1
+	//MX6Q_PAD_SD1_DAT2__GPIO_1_19 | MUX_PAD_CTRL(NO_PAD_CTRL),
+	MX6Q_PAD_SD1_DAT2__PWM2_PWMO | MUX_PAD_CTRL(NO_PAD_CTRL),
+
+	// MX6_DIO2
 	MX6Q_PAD_SD4_DAT1__GPIO_2_9 | MUX_PAD_CTRL(NO_PAD_CTRL),
+	//MX6Q_PAD_SD4_DAT1__PWM3_PWMO | MUX_PAD_CTRL(NO_PAD_CTRL),
+
+	// MX6_DIO3
 	MX6Q_PAD_SD4_DAT2__GPIO_2_10 | MUX_PAD_CTRL(NO_PAD_CTRL),
+	//MX6Q_PAD_SD4_DAT2__PWM4_PWMO | MUX_PAD_CTRL(NO_PAD_CTRL),
+
 	// MIPI_DIO
 	MX6Q_PAD_SD1_DAT3__GPIO_1_21 | MUX_PAD_CTRL(NO_PAD_CTRL),
 	// UART2_EN#
@@ -303,15 +315,56 @@ void setup_spi(void)
 
 int board_phy_config(struct phy_device *phydev)
 {
-	/* min rx data delay */
-	ksz9021_phy_extended_write(phydev,
-			MII_KSZ9021_EXT_RGMII_RX_DATA_SKEW, 0x0);
-	/* min tx data delay */
-	ksz9021_phy_extended_write(phydev,
-			MII_KSZ9021_EXT_RGMII_TX_DATA_SKEW, 0x0);
-	/* max rx/tx clock delay, min rx/tx control */
-	ksz9021_phy_extended_write(phydev,
-			MII_KSZ9021_EXT_RGMII_CLOCK_SKEW, 0xf0f0);
+	unsigned short val;
+printf("\n%s: port%d link=%d addr=%d phy_id=0x%08x\n", __func__, phydev->port, phydev->link, phydev->addr, phydev->phy_id);
+
+	/* Marvel 88E1510 */
+	if (phydev->phy_id == 0x1410dd1) {
+#if 1
+		/* Errata 3.1 - PHY initialization */
+		phy_write(phydev, MDIO_DEVAD_NONE, 22, 0x00ff);
+		phy_write(phydev, MDIO_DEVAD_NONE, 17, 0x214b);
+		phy_write(phydev, MDIO_DEVAD_NONE, 16, 0x2144);
+		phy_write(phydev, MDIO_DEVAD_NONE, 17, 0x0c28);
+		phy_write(phydev, MDIO_DEVAD_NONE, 16, 0x2146);
+		phy_write(phydev, MDIO_DEVAD_NONE, 17, 0xb233);
+		phy_write(phydev, MDIO_DEVAD_NONE, 16, 0x214d);
+		phy_write(phydev, MDIO_DEVAD_NONE, 17, 0xcc0c);
+		phy_write(phydev, MDIO_DEVAD_NONE, 16, 0x2159);
+		phy_write(phydev, MDIO_DEVAD_NONE, 22, 0x00fb);
+		phy_write(phydev, MDIO_DEVAD_NONE,  7, 0xc00d);
+		phy_write(phydev, MDIO_DEVAD_NONE, 22, 0);
+#endif
+
+#if 0
+		/* Errata 4.4: improving link times with non IEEE compliant link partners */
+		phy_write(phydev, MDIO_DEVAD_NONE, 22, 0x00fc);
+		val = phy_read(phydev, MDIO_DEVAD_NONE, 1);
+		val |= 1<<15;
+		phy_write(phydev, MDIO_DEVAD_NONE, 1, val);
+		phy_write(phydev, MDIO_DEVAD_NONE, 22, 0);
+#endif
+
+#if 0
+		/* introduce tx/rx clock delay */
+		phy_write(phydev, MDIO_DEVAD_NONE, 22, 2);
+		val = phy_read(phydev, MDIO_DEVAD_NONE, 21);
+printf("val=0x%x\n", val);
+		val &= ~(1<<4); /* tx clock delay */
+		val &= ~(1<<5); /* rx clock delay */
+printf("val=0x%x\n", val);
+		phy_write(phydev, MDIO_DEVAD_NONE, 21, val);
+		phy_write(phydev, MDIO_DEVAD_NONE, 22, 0);
+#endif
+
+#if 0 // only needed if making changes that require reset
+		/* soft reset PHY */
+		val = phy_read(phydev, MDIO_DEVAD_NONE, 0);
+		val |= (1<<15);
+		phy_write(phydev, MDIO_DEVAD_NONE, 0, val);
+#endif
+	}
+
 	if (phydev->drv->config)
 		phydev->drv->config(phydev);
 
@@ -344,6 +397,12 @@ static void setup_gpio(void)
 	gpio_direction_output(IMX_GPIO_NR(4, 10), 1); // red
 	gpio_direction_output(IMX_GPIO_NR(4, 15), 1); // loc
 	gpio_direction_output(IMX_GPIO_NR(4, 6), 1);  // grn
+
+	/* default DIO's */
+	gpio_direction_input(IMX_GPIO_NR(1, 9));
+	gpio_direction_input(IMX_GPIO_NR(1, 19));
+	gpio_direction_input(IMX_GPIO_NR(2, 9));
+	gpio_direction_input(IMX_GPIO_NR(2, 10));
 }
 
 int setup_pcie(void)
@@ -391,10 +450,15 @@ static iomux_v3_cfg_t const backlight_pads[] = {
 	MX6Q_PAD_SD2_CMD__GPIO_1_11 | MUX_PAD_CTRL(NO_PAD_CTRL),
 #define MIPI_BACKLIGHT_GP IMX_GPIO_NR(1, 11)
 
-	/* Backlight on LVDS connector: J6 */
+	/* Backlight CABEN on LVDS connector: J6 */
 	MX6Q_PAD_SD2_CLK__GPIO_1_10 | MUX_PAD_CTRL(NO_PAD_CTRL),
 
 #define LVDS_BACKLIGHT_GP IMX_GPIO_NR(1, 10)
+};
+
+static struct pwm_device pwm3 = {
+	.pwm_id = 3,
+	.pwmo_invert = 0,
 };
 
 /* Parallel RGB Input (Analog Video In) */
@@ -475,7 +539,7 @@ static void enable_hdmi(struct display_info_t const *dev)
 
 static int detect_i2c(struct display_info_t const *dev)
 {
-printf("%s bus=%d addr=0x%02x\n", __func__, dev->bus, dev->addr);
+printf("%s bus=%d addr=0x%02x %d\n", __func__, dev->bus, dev->addr, ((0 == i2c_set_bus_num(dev->bus)) && (0 == i2c_probe(dev->addr))));
 	return ((0 == i2c_set_bus_num(dev->bus))
 		&&
 		(0 == i2c_probe(dev->addr)));
@@ -485,11 +549,24 @@ static void enable_lvds(struct display_info_t const *dev)
 {
 	struct iomuxc *iomux = (struct iomuxc *)
 				IOMUXC_BASE_ADDR;
+
+	/* set CH0 data width to 24bit (IOMUXC_GPR2:5 0=18bit, 1=24bit) */
 printf("%s\n", __func__);
 	u32 reg = readl(&iomux->gpr[2]);
+printf("%p=%x\n", &iomux->gpr[2], reg);
 	reg |= IOMUXC_GPR2_DATA_WIDTH_CH0_24BIT;
 	writel(reg, &iomux->gpr[2]);
-	gpio_direction_output(LVDS_BACKLIGHT_GP, 1);
+
+	/* Disable CABC:
+	 * when enabled this feature sets backlight automatically according to content
+	 * which may cause annoying unstable backlight issue
+	 */
+	gpio_direction_output(LVDS_BACKLIGHT_GP, 0);
+
+	/* pwm */
+	imx_iomux_v3_setup_pad(MX6Q_PAD_SD1_CMD__PWM4_PWMO | MUX_PAD_CTRL(PAD_CTL_DSE_240ohm));
+	imx_pwm_config(pwm3, 25000, 50000);
+	imx_pwm_enable(pwm3);
 }
 
 static void enable_vidout(struct display_info_t const *dev)
@@ -500,6 +577,7 @@ static void enable_vidout(struct display_info_t const *dev)
 }
 
 static struct display_info_t const displays[] = {{
+	/* HDMI Output */
 	.bus	= -1,
 	.addr	= 0,
 	.pixfmt	= IPU_PIX_FMT_RGB24,
@@ -520,7 +598,8 @@ static struct display_info_t const displays[] = {{
 		.sync           = FB_SYNC_EXT,
 		.vmode          = FB_VMODE_NONINTERLACED
 } }, {
-	.bus	= 3,
+	/* HannStar HSD100PXN1-A00 with egalx_ts controller */
+	.bus	= 2,
 	.addr	= 0x4,
 	.pixfmt	= IPU_PIX_FMT_LVDS666,
 	.detect	= detect_i2c,
@@ -539,8 +618,9 @@ static struct display_info_t const displays[] = {{
 		.vsync_len      = 10,
 		.sync           = FB_SYNC_EXT,
 		.vmode          = FB_VMODE_NONINTERLACED
+#if 0
 } }, {
-	.bus	= 3,
+	.bus	= 2,
 	.addr	= 0x38,
 	.pixfmt	= IPU_PIX_FMT_LVDS666,
 	.detect	= detect_i2c,
@@ -560,7 +640,7 @@ static struct display_info_t const displays[] = {{
 		.sync           = FB_SYNC_EXT,
 		.vmode          = FB_VMODE_NONINTERLACED
 } }, {
-	.bus	= 3,
+	.bus	= 2,
 	.addr	= 0x2a,
 	.pixfmt	= IPU_PIX_FMT_RGB666,
 	.detect	= detect_i2c,
@@ -579,6 +659,7 @@ static struct display_info_t const displays[] = {{
 		.vsync_len      = 10,
 		.sync           = 0,
 		.vmode          = FB_VMODE_NONINTERLACED
+#endif
 } } };
 
 int board_video_skip(void)
@@ -597,6 +678,7 @@ int board_video_skip(void)
 		}
 		if (!panel) {
 			panel = displays[0].mode.name;
+			i = 0;
 			printf("No panel detected: default to %s\n", panel);
 		}
 	} else {
@@ -632,6 +714,7 @@ static void setup_display(void)
 
 	int reg;
 
+printf("%s\n", __func__);
 	/* Turn on LDB0,IPU,IPU DI0 clocks */
 	reg = __raw_readl(&mxc_ccm->CCGR3);
 	reg |=   MXC_CCM_CCGR3_IPU1_IPU_DI0_OFFSET
@@ -701,6 +784,49 @@ static void setup_display(void)
 }
 #endif
 
+static int setup_pmic_voltages(void)
+{
+	int ret;
+	unsigned char value, rev_id = 0 ;
+
+	ret = i2c_set_bus_num(1);
+	if (ret)
+		return ret; 
+	if (!i2c_probe(0x8)) {
+		if (i2c_read(0x8, 0, 1, &value, 1)) {
+			printf("Read device ID error!\n");
+			return -1;
+		}
+		if (i2c_read(0x8, 3, 1, &rev_id, 1)) {
+			printf("Read Rev ID error!\n");
+			return -1;
+		}
+		printf("Found PFUZE100! deviceid=%x,revid=%x\n", value, rev_id);
+		/*set VGEN1 to 1.5V and enable*/
+		if (i2c_read(0x8, 0x6c, 1, &value, 1)) {
+			printf("Read VGEN1 error!\n");
+			return -1;
+		}
+		value &= ~0x1f;
+		value |= 0x1e;
+		if (i2c_write(0x8, 0x6c, 1, &value, 1)) {
+			printf("Set VGEN1 error!\n");
+			return -1;
+		}
+		/*set SWBST to 5.0V and enable */
+		if (i2c_read(0x8, 0x66, 1, &value, 1)) {
+			printf("Read SWBST error!\n");
+			return -1;
+		}
+		value &= ~0xf;
+		value |= 0x8;
+		if (i2c_write(0x8, 0x66, 1, &value, 1)) {
+			printf("Set SWBST error!\n");
+			return -1;
+		}
+	}
+}
+
 int board_early_init_f(void)
 {
 	setup_iomux_uart();
@@ -724,6 +850,8 @@ int overwrite_console(void)
 
 int board_init(void)
 {
+	int ret = 0;
+
 	/* address of linux boot parameters */
 	gd->bd->bi_boot_params = PHYS_SDRAM + 0x100;
 
@@ -734,9 +862,13 @@ int board_init(void)
 	setup_i2c(1, CONFIG_SYS_I2C_SPEED, 0x7f, &i2c_pad_info1);
 	setup_i2c(2, CONFIG_SYS_I2C_SPEED, 0x7f, &i2c_pad_info2);
 
-#if 1
-	setup_pcie();
+#ifdef CONFIG_I2C_MXC
+	ret = setup_pmic_voltages();
+	if (ret)
+		return -1;
 #endif
+
+	setup_pcie();
 
 #ifdef CONFIG_CMD_SATA
 	setup_sata();
@@ -848,17 +980,7 @@ static const struct boot_mode board_boot_modes[] = {
 
 int misc_init_r(void)
 {
-
-/*
-printf("%s\n", __func__);
-while (1) {
-	mdelay(500);
-	gpio_set_value(IMX_GPIO_NR(4, 15), 1);
-	mdelay(500);
-	gpio_set_value(IMX_GPIO_NR(4, 15), 0);
-}
-*/
-
+#if 0
 // set/override envs
 setenv("ethaddr", "ae:30:32:84:fd:02"); // generated from tools/gen_eth_addr
 setenv("serverip", "192.168.1.146");
@@ -871,7 +993,8 @@ setenv("bootargs", "console=ttymxc1,115200 root=/dev/sda2 rootfstype=ext3 rootwa
 setenv("image", "ventana/uImage");
 setenv("bootnet", "tftp 0x10800000 ${image}; bootm 0x10800000");
 //setenv("bootcmd", "");
-setenv("bootcmd", "run bootnet");
+//setenv("bootcmd", "run bootnet");
+setenv("bootcmd", "run bootowrt_net");
 //setenv("bootcmd", "usb start; ext2load usb 0:2 0x10800000 uImage; bootm 0x10800000");
 
 setenv("bootltib", "setenv bootargs 'console=ttymxc1,115200 root=/dev/mmcblk0p1 rootfstype=ext4 debug'; mmc dev 0; ext2load mmc 0 0x10800000 /boot/uImage; bootm 0x10800000");
@@ -879,8 +1002,7 @@ setenv("bootltib_net", "tftp 0x10800000 ventana/uImage-ltib; setenv bootargs 'co
 
 setenv("bootowrt", "setenv bootargs 'console=ttymxc1,115200 root=/dev/ram0 rootfstype=ramfs debug'; mmc dev 0; ext2load mmc 0 0x10800000 /boot/openwrt-imx61-uImage-gw5400; bootm 0x10800000");
 setenv("bootowrt_net", "tftp 0x10800000 ventana/openwrt-imx61-uImage-gw5400; setenv bootargs 'console=ttymxc1,115200 root=/dev/ram0 rootfstype=ramfs debug'; bootm 0x10800000");
-
-setenv("bootfoo", "setenv bootargs 'console=ttymxc1,115200 root=/dev/ram0 rootfstype=ramfs debug'; tftp 0x10800000 ventana/uImage-foo; bootm 0x10800000");
+#endif
 
 #ifdef CONFIG_PREBOOT
 	preboot_keys();
