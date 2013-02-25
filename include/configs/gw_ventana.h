@@ -32,9 +32,11 @@
 #include <asm/arch/imx-regs.h>
 #include <asm/imx-common/gpio.h>
 
+/* ATAGs */
 #define CONFIG_CMDLINE_TAG
 #define CONFIG_SETUP_MEMORY_TAGS
 #define CONFIG_INITRD_TAG
+#define CONFIG_SERIAL_TAG
 #define CONFIG_REVISION_TAG
 
 /* Size of malloc() pool */
@@ -235,21 +237,20 @@
 	"ipaddr=192.168.1.1\0" \
 	"ethaddr=00:D0:12:30:EE:FA\0" \
 	"clearenv=sf probe && sf erase 0x80000 0x2000 && echo resotred environment to factory defaults\0" \
-	"bootcmd=tftp 0x10800000 ${image}; " \
-		"setenv bootargs console=${console},${baudrate} root=${root} ${video} ${debug}; " \
-		"bootm\0" \
 	"updateuboot=echo Updating uboot from ${serverip}:ventana/u-boot.imx ...; "\
 		"tftpboot 0x10800000 ventana/u-boot.imx && " \
 		"sf probe && " \
 		"sf erase 0 0x80000 && " \
 		"sf write 0x10800000 0x400 ${filesize}\0" \
-	"root=/dev/mmcblk0p2 rootwait rw\0" \
+	"root=/dev/mmcblk0p1 rootwait rw\0" \
 	"video=\0" \
+	"video_hdmi=mxcfb0:dev=hdmi,1280x720M@60,if=RGB24\0" \
+	"video_lvds1=mxcfb0:dev=ldb,LDB-XGA,if=RGB666\0" \
 	"image=ventana/uImage\0" \
 	"debug=debug\0" \
 	\
-	"bootnet=tftp 0x10800000 ${image}; " \
-		"setenv bootargs console=${console},${baudrate} root=${root} ${video} ${debug}; " \
+	"bootnet=tftp 0x10800000 ${image} && " \
+		"setenv bootargs console=${console},${baudrate} root=${root} ${video} ${debug} && " \
 		"bootm\0" \
 	\
 	"bootltib=setenv bootargs console=${console},${baudrate} root=/dev/mmcblk0p1 rootfstype=ext4 debug; mmc dev 0; ext2load mmc 0 0x10800000 /boot/uImage; bootm\0" \
@@ -257,6 +258,7 @@
 	"bootowrt=setenv bootargs console=${console},${baudrate} root=/dev/ram0 rootfstype=ramfs debug; mmc dev 0; ext2load mmc 0 0x10800000 /boot/openwrt-imx61-uImage-gw5400; bootm\0" \
 	"bootowrt_net=tftp 0x10800000 ventana/openwrt-imx61-uImage-gw5400; setenv bootargs console=${console},${baudrate} root=/dev/ram0 rootfstype=ramfs debug; bootm\0"
 
+/*
 #define CONFIG_BOOTCOMMAND \
 	   "mmc dev ${mmcdev};" \
 	   "mmc dev ${mmcdev}; if mmc rescan; then " \
@@ -269,6 +271,14 @@
 			   "fi; " \
 		   "fi; " \
 	   "else run netboot; fi"
+*/
+
+#define CONFIG_BOOTCOMMAND \
+	"mmc dev 0; " \
+	"mmc dev 0; if mmc rescan; then " \
+		"ext2load mmc 0:1 0x10800000 boot/uImage && " \
+		"setenv bootargs console=${console},${baudrate} root=${root} ${video} ${debug} && " \
+		"bootm; fi" \
 
 #define CONFIG_ARP_TIMEOUT     200UL
 
