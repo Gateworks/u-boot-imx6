@@ -291,10 +291,33 @@ int board_mmc_init(bd_t *bis)
 }
 #endif
 
+/* this is passed in as ATAG_REVISION which is reported from linux
+ * /proc/cpuinfo 'Revision' field (see arch/arm/kernel/setup.c)
+ *
+ * the value 0x63000 is needed for imx-lib/vpu_lib.h cpu_is_mx6q function
+ * to return true to setup proper firmware filename for loading binary firmware
+ * 0x61xxx is imx6dl
+ * 0x63xxx is imx6q
+ */
 u32 get_board_rev(void)
 {
-	return 0x00000 ;
+	return 0x63000;
 }
+
+#ifdef CONFIG_SERIAL_TAG
+void get_board_serial(struct tag_serialnr *serialnr)
+{
+  char *serial = getenv("serial#");
+
+  if (serial) {
+    serialnr->high = 0;
+    serialnr->low = simple_strtoul(serial, NULL, 10);
+  } else {
+    serialnr->high = 0;
+    serialnr->low = 0;
+  }
+}
+#endif
 
 #ifdef CONFIG_MXC_SPI
 iomux_v3_cfg_t const ecspi1_pads[] = {
