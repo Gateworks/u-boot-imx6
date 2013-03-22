@@ -42,6 +42,9 @@
 #include <asm/arch/crm_regs.h>
 #include <asm/arch/mxc_hdmi.h>
 #include <i2c.h>
+#include <fdt_support.h>
+
+#include "ventana_eeprom.h"
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -65,13 +68,6 @@ DECLARE_GLOBAL_DATA_PTR;
 	PAD_CTL_PUS_100K_UP | PAD_CTL_SPEED_MED |		\
 	PAD_CTL_DSE_40ohm | PAD_CTL_HYS |			\
 	PAD_CTL_ODE | PAD_CTL_SRE_FAST)
-
-int dram_init(void)
-{
-       gd->ram_size = get_ram_size((void *)PHYS_SDRAM, PHYS_SDRAM_SIZE);
-
-       return 0;
-}
 
 /* UART1, RS485 */
 iomux_v3_cfg_t const uart1_pads[] = {
@@ -253,7 +249,7 @@ struct fsl_esdhc_cfg usdhc_cfg[1] = {
 int board_mmc_getcd(struct mmc *mmc)
 {
 	struct fsl_esdhc_cfg *cfg = (struct fsl_esdhc_cfg *)mmc->priv;
-	int ret;
+	int ret = 0;
 
 	if (cfg->esdhc_base == USDHC3_BASE_ADDR) {
 		/* Card Detect */
@@ -291,6 +287,73 @@ int board_mmc_init(bd_t *bis)
 }
 #endif
 
+/* read ventana EEPROM and return structure or NULL on error
+ */
+static struct ventana_board_info *read_eeprom(int display)
+{
+	int i;
+	int chksum;
+	static struct ventana_board_info board_info;
+	unsigned char *buf = (unsigned char *) &board_info;
+	struct ventana_board_info *info = &board_info;
+
+//printf("%s\n", __func__);
+	memset(info, 0, sizeof(board_info));
+
+	// ensure bus and device exist
+	//mdelay(1000); // I believe this is needed to wait for GSC to powerup w/o battery - need to investigate
+	if (i2c_set_bus_num(0) || i2c_probe(0x51)) {
+		if (display)
+			printf("**** Failed to detect GSC EEPROM\n");
+		return NULL;
+	}
+
+	// read eeprom config section
+	if (i2c_read(0x51, 0x00, 1, buf, sizeof(board_info))) {
+		if (display)
+			printf("**** Failed to read GSC EEPROM\n");
+		return NULL;
+	}
+
+	// sanity checks
+	if (info->model[0] != 'G' || info->model[1] != 'W') {
+		if (display)
+			printf("**** Invalid Model\n");
+		return NULL;
+	}
+
+	// validate checksum
+//printf("calculating checksum\n");
+	for (chksum = 0, i = 0; i < sizeof(*info)-2; i++)
+		chksum += buf[i];
+//printf("chksum:0x%04x:0x%02x%02x\n", chksum, info->chksum[1], info->chksum[0]);
+	if ((info->chksum[0] != chksum>>8) || (info->chksum[1] != (chksum&0xff))) {
+		if (display)
+			printf("**** Failed EEPROM checksum\n");
+		return NULL;
+	}
+
+//printf("board info valid\n");
+	return info;
+}
+
+
+/* get_mac from env string, with default
+ */
+static void get_mac(char *envvar, unsigned char *def)
+{
+	char str[20];
+	char *env = getenv(envvar);
+
+	if (!env) {
+		sprintf(str, "%02X:%02X:%02X:%02X:%02X:%02X",
+			def[0], def[1], def[2], def[3], def[4], def[5]);
+		printf("### Setting environment from ROM MAC address = \"%s\"\n", str);
+		setenv(envvar, str);
+	}
+}
+
+
 /* this is passed in as ATAG_REVISION which is reported from linux
  * /proc/cpuinfo 'Revision' field (see arch/arm/kernel/setup.c)
  *
@@ -305,14 +368,24 @@ u32 get_board_rev(void)
 }
 
 #ifdef CONFIG_SERIAL_TAG
+/* called when setting up ATAGS before booting kernel
+ * populate serialnum from the following (in order of priority):
+ *   serial# env var
+ *   eeprom
+ */
 void get_board_serial(struct tag_serialnr *serialnr)
 {
+	struct ventana_board_info *info = read_eeprom(0);
   char *serial = getenv("serial#");
 
+//printf("%s\n", __func__);
   if (serial) {
     serialnr->high = 0;
     serialnr->low = simple_strtoul(serial, NULL, 10);
-  } else {
+  } else if (info) {
+    serialnr->high = 0;
+		serialnr->low = info->serial;
+	} else {
     serialnr->high = 0;
     serialnr->low = 0;
   }
@@ -328,7 +401,7 @@ iomux_v3_cfg_t const ecspi1_pads[] = {
 	MX6Q_PAD_EIM_D16__ECSPI1_SCLK | MUX_PAD_CTRL(SPI_PAD_CTRL),
 };
 
-void setup_spi(void)
+static void setup_spi(void)
 {
 	gpio_direction_output(CONFIG_SF_DEFAULT_CS, 1);
 	imx_iomux_v3_setup_multiple_pads(ecspi1_pads,
@@ -338,12 +411,11 @@ void setup_spi(void)
 
 int board_phy_config(struct phy_device *phydev)
 {
-	unsigned short val;
-printf("\n%s: port%d link=%d addr=%d phy_id=0x%08x\n", __func__, phydev->port, phydev->link, phydev->addr, phydev->phy_id);
+//	unsigned short val;
+//printf("\n%s: port%d link=%d addr=%d phy_id=0x%08x\n", __func__, phydev->port, phydev->link, phydev->addr, phydev->phy_id);
 
 	/* Marvel 88E1510 */
 	if (phydev->phy_id == 0x1410dd1) {
-#if 1
 		/* Errata 3.1 - PHY initialization */
 		phy_write(phydev, MDIO_DEVAD_NONE, 22, 0x00ff);
 		phy_write(phydev, MDIO_DEVAD_NONE, 17, 0x214b);
@@ -357,9 +429,8 @@ printf("\n%s: port%d link=%d addr=%d phy_id=0x%08x\n", __func__, phydev->port, p
 		phy_write(phydev, MDIO_DEVAD_NONE, 22, 0x00fb);
 		phy_write(phydev, MDIO_DEVAD_NONE,  7, 0xc00d);
 		phy_write(phydev, MDIO_DEVAD_NONE, 22, 0);
-#endif
 
-#if 0
+#if 0 // untested
 		/* Errata 4.4: improving link times with non IEEE compliant link partners */
 		phy_write(phydev, MDIO_DEVAD_NONE, 22, 0x00fc);
 		val = phy_read(phydev, MDIO_DEVAD_NONE, 1);
@@ -368,19 +439,17 @@ printf("\n%s: port%d link=%d addr=%d phy_id=0x%08x\n", __func__, phydev->port, p
 		phy_write(phydev, MDIO_DEVAD_NONE, 22, 0);
 #endif
 
-#if 0
+#if 0 // do not seem to need this on gw5400
 		/* introduce tx/rx clock delay */
 		phy_write(phydev, MDIO_DEVAD_NONE, 22, 2);
 		val = phy_read(phydev, MDIO_DEVAD_NONE, 21);
-printf("val=0x%x\n", val);
 		val &= ~(1<<4); /* tx clock delay */
 		val &= ~(1<<5); /* rx clock delay */
-printf("val=0x%x\n", val);
 		phy_write(phydev, MDIO_DEVAD_NONE, 21, val);
 		phy_write(phydev, MDIO_DEVAD_NONE, 22, 0);
 #endif
 
-#if 0 // only needed if making changes that require reset
+#if 0 // only needed if making changes above which require reset
 		/* soft reset PHY */
 		val = phy_read(phydev, MDIO_DEVAD_NONE, 0);
 		val |= (1<<15);
@@ -428,7 +497,7 @@ static void setup_gpio(void)
 	gpio_direction_input(IMX_GPIO_NR(2, 10));
 }
 
-int setup_pcie(void)
+static int setup_pcie(void)
 {
 	/* enable clock and toggle PCI_RST# */
 	gpio_direction_output(IMX_GPIO_NR(1, 29), 0); // PCIESWT_RST#
@@ -441,8 +510,7 @@ int setup_pcie(void)
 }
 
 #ifdef CONFIG_CMD_SATA
-
-int setup_sata(void)
+static int setup_sata(void)
 {
 	struct iomuxc_base_regs *const iomuxc_regs
 		= (struct iomuxc_base_regs *) IOMUXC_BASE_ADDR;
@@ -531,7 +599,7 @@ struct display_info_t {
 
 static int detect_hdmi(struct display_info_t const *dev)
 {
-printf("%s: %d\n", __func__, __raw_readb(HDMI_ARB_BASE_ADDR+HDMI_PHY_STAT0) & HDMI_PHY_HPD);
+//printf("%s: %d\n", __func__, __raw_readb(HDMI_ARB_BASE_ADDR+HDMI_PHY_STAT0) & HDMI_PHY_HPD);
 	return __raw_readb(HDMI_ARB_BASE_ADDR+HDMI_PHY_STAT0) & HDMI_PHY_HPD;
 }
 
@@ -562,7 +630,7 @@ static void enable_hdmi(struct display_info_t const *dev)
 
 static int detect_i2c(struct display_info_t const *dev)
 {
-printf("%s bus=%d addr=0x%02x %d\n", __func__, dev->bus, dev->addr, ((0 == i2c_set_bus_num(dev->bus)) && (0 == i2c_probe(dev->addr))));
+//printf("%s bus=%d addr=0x%02x %d\n", __func__, dev->bus, dev->addr, ((0 == i2c_set_bus_num(dev->bus)) && (0 == i2c_probe(dev->addr))));
 	return ((0 == i2c_set_bus_num(dev->bus))
 		&&
 		(0 == i2c_probe(dev->addr)));
@@ -574,9 +642,9 @@ static void enable_lvds(struct display_info_t const *dev)
 				IOMUXC_BASE_ADDR;
 
 	/* set CH0 data width to 24bit (IOMUXC_GPR2:5 0=18bit, 1=24bit) */
-printf("%s\n", __func__);
+//printf("%s\n", __func__);
 	u32 reg = readl(&iomux->gpr[2]);
-printf("%p=%x\n", &iomux->gpr[2], reg);
+//printf("%p=%x\n", &iomux->gpr[2], reg);
 	reg |= IOMUXC_GPR2_DATA_WIDTH_CH0_24BIT;
 	writel(reg, &iomux->gpr[2]);
 
@@ -592,12 +660,14 @@ printf("%p=%x\n", &iomux->gpr[2], reg);
 	imx_pwm_enable(pwm3);
 }
 
+#if 0
 static void enable_vidout(struct display_info_t const *dev)
 {
 	imx_iomux_v3_setup_multiple_pads(
 		vidout_pads,
 		 ARRAY_SIZE(vidout_pads));
 }
+#endif
 
 static struct display_info_t const displays[] = {{
 	/* HDMI Output */
@@ -737,7 +807,6 @@ static void setup_display(void)
 
 	int reg;
 
-printf("%s\n", __func__);
 	/* Turn on LDB0,IPU,IPU DI0 clocks */
 	reg = __raw_readl(&mxc_ccm->CCGR3);
 	reg |=   MXC_CCM_CCGR3_IPU1_IPU_DI0_OFFSET
@@ -824,7 +893,7 @@ static int setup_pmic_voltages(void)
 			printf("Read Rev ID error!\n");
 			return -1;
 		}
-		printf("Found PFUZE100! deviceid=%x,revid=%x\n", value, rev_id);
+//printf("Found PFUZE100! deviceid=%x,revid=%x\n", value, rev_id);
 		/*set VGEN1 to 1.5V and enable*/
 		if (i2c_read(0x8, 0x6c, 1, &value, 1)) {
 			printf("Read VGEN1 error!\n");
@@ -848,64 +917,6 @@ static int setup_pmic_voltages(void)
 			return -1;
 		}
 	}
-}
-
-int board_early_init_f(void)
-{
-	setup_iomux_uart();
-	setup_gpio();
-
-#if defined(CONFIG_VIDEO_IPUV3)
-	setup_display();
-#endif
-
-	return 0;
-}
-
-/*
- * Do not overwrite the console
- * Use always serial for U-Boot console
- */
-int overwrite_console(void)
-{
-	return 1;
-}
-
-int board_init(void)
-{
-	int ret = 0;
-
-	/* address of linux boot parameters */
-	gd->bd->bi_boot_params = PHYS_SDRAM + 0x100;
-
-#ifdef CONFIG_MXC_SPI
-	setup_spi();
-#endif
-	setup_i2c(0, CONFIG_SYS_I2C_SPEED, 0x7f, &i2c_pad_info0);
-	setup_i2c(1, CONFIG_SYS_I2C_SPEED, 0x7f, &i2c_pad_info1);
-	setup_i2c(2, CONFIG_SYS_I2C_SPEED, 0x7f, &i2c_pad_info2);
-
-#ifdef CONFIG_I2C_MXC
-	ret = setup_pmic_voltages();
-	if (ret)
-		return -1;
-#endif
-
-	setup_pcie();
-
-#ifdef CONFIG_CMD_SATA
-	setup_sata();
-#endif
-
-	return 0;
-}
-
-int checkboard(void)
-{
-	puts("Board: GW5400\n");
-
-	// TODO: EEPROM configuration
-
 	return 0;
 }
 
@@ -1001,38 +1012,309 @@ static const struct boot_mode board_boot_modes[] = {
 };
 #endif
 
+/*
+ * Board Support
+ */
+
+/*
+ * Do not overwrite the console
+ * Use always serial for U-Boot console
+ */
+int overwrite_console(void)
+{
+	return 1;
+}
+
+
+/*
+ * very early in the call chain - setup SoC peripherals
+ * (NB: Can not printf from here)
+ */
+int board_early_init_f(void)
+{
+	setup_iomux_uart();
+	setup_gpio();
+#ifdef CONFIG_MXC_SPI
+	setup_spi();
+#endif
+	setup_i2c(0, CONFIG_SYS_I2C_SPEED, 0x7f, &i2c_pad_info0);
+	setup_i2c(1, CONFIG_SYS_I2C_SPEED, 0x7f, &i2c_pad_info1);
+	setup_i2c(2, CONFIG_SYS_I2C_SPEED, 0x7f, &i2c_pad_info2);
+#if defined(CONFIG_VIDEO_IPUV3)
+	setup_display();
+#endif
+
+	return 0;
+}
+
+#if defined(CONFIG_DISPLAY_BOARDINFO)
+/* Identify board and display banner/info
+ */
+int checkboard(void)
+{
+	struct ventana_board_info *info;
+//printf("%s\n", __func__);
+
+	printf("Gateworks Corporation Copyright 2013\n");
+
+	mdelay(1000); // I believe this is needed to wait for GSC to powerup w/o battery - need to investigate
+ 	info = read_eeprom(1);
+	if (info) {
+		printf("Model Number: %s\n", info->model);
+		printf("Manufacturer Date: %02x-%02x-%02x%02x\n",
+			info->mfgdate[0], info->mfgdate[1],
+			info->mfgdate[2], info->mfgdate[3]);
+		printf("Serial #: %d\n", info->serial);
+	} else {
+		printf("Invalid EEPROM - board will not function fully\n");
+	}
+	//return 1; //hang
+	return 0;
+}
+#endif
+
+/* Set gd->ram_size
+ */
+int dram_init(void)
+{
+	struct ventana_board_info *info = read_eeprom(0);
+
+//printf("%s\n", __func__);
+	if (info && info->sdram_size > 0 && info->sdram_size < 9) {
+		int i = info->sdram_size;
+		gd->ram_size = 32*1024*1024;
+		while(--i)
+			gd->ram_size *=2;		
+	} else {
+		// let get_ram_size do its work against 1GB
+		gd->ram_size = get_ram_size((void *)PHYS_SDRAM, PHYS_SDRAM_SIZE);
+	}
+
+	return 0;
+}
+
+/* initialize periperhals
+ */
+int board_init(void)
+{
+	int ret = 0;
+ 
+//printf("%s\n", __func__);
+	/* address of linux boot parameters */
+	gd->bd->bi_boot_params = PHYS_SDRAM + 0x100;
+
+#ifdef CONFIG_I2C_MXC
+	ret = setup_pmic_voltages();
+	if (ret)
+		return -1;
+#endif
+
+	setup_pcie();
+
+#ifdef CONFIG_CMD_SATA
+	setup_sata();
+#endif
+
+	return 0;
+}
+
+/* late init
+ */
 int misc_init_r(void)
 {
-#if 0
-// set/override envs
-setenv("ethaddr", "ae:30:32:84:fd:02"); // generated from tools/gen_eth_addr
-setenv("serverip", "192.168.1.146");
-//setenv("ipaddr", "192.168.1.88");
-//setenv("bootargs", "console=ttymxc1,115200 root=/dev/mmcblk0p1 rootfstype=ext4 rootwait debug arm_freq=1200");
-//setenv("bootargs", "console=ttymxc1,115200 root=/dev/sda1 rootfstype=ext4 rootwait debug");
-setenv("bootargs", "console=ttymxc1,115200 root=/dev/sda2 rootfstype=ext3 rootwait debug");
-//setenv("bootargs", "console=ttymxc1,115200 root=/dev/ram0 rootfstype=ramfs debug");
-//setenv("image", "ventana/uImage-ltib");
-setenv("image", "ventana/uImage");
-setenv("bootnet", "tftp 0x10800000 ${image}; bootm 0x10800000");
-//setenv("bootcmd", "");
-//setenv("bootcmd", "run bootnet");
-setenv("bootcmd", "run bootowrt_net");
-//setenv("bootcmd", "usb start; ext2load usb 0:2 0x10800000 uImage; bootm 0x10800000");
+	struct ventana_board_info *info = read_eeprom(0);
 
-setenv("bootltib", "setenv bootargs 'console=ttymxc1,115200 root=/dev/mmcblk0p1 rootfstype=ext4 debug'; mmc dev 0; ext2load mmc 0 0x10800000 /boot/uImage; bootm 0x10800000");
-setenv("bootltib_net", "tftp 0x10800000 ventana/uImage-ltib; setenv bootargs 'console=ttymxc1,115200 root=/dev/mmcblk0p1 rootfstype=ext4 debug'; bootm 0x10800000");
+//printf("%s\n", __func__);
+/*
+	char *env;
+	char str[20];
+ 	env = getenv("ethaddr");
+	if (!env && info) {
+		sprintf(str, "%02X:%02X:%02X:%02X:%02X:%02X",
+			info->mac0[0], info->mac0[1],
+			info->mac0[2], info->mac0[3],
+			info->mac0[4], info->mac0[5]) ;
+		printf("### Setting environment from ROM MAC address = \"%s\"\n", str);
+		setenv("ethaddr", str);
+		setenv("eth0addr", str);
+	}
+*/
 
-setenv("bootowrt", "setenv bootargs 'console=ttymxc1,115200 root=/dev/ram0 rootfstype=ramfs debug'; mmc dev 0; ext2load mmc 0 0x10800000 /boot/openwrt-imx61-uImage-gw5400; bootm 0x10800000");
-setenv("bootowrt_net", "tftp 0x10800000 ventana/openwrt-imx61-uImage-gw5400; setenv bootargs 'console=ttymxc1,115200 root=/dev/ram0 rootfstype=ramfs debug'; bootm 0x10800000");
-#endif
-
-#ifdef CONFIG_PREBOOT
-	preboot_keys();
-#endif
+	get_mac("ethaddr", info->mac0);
+	get_mac("eth1addr", info->mac1);
 
 #ifdef CONFIG_CMD_BMODE
 	add_board_boot_modes(board_boot_modes);
 #endif
 	return 0;
 }
+
+#if defined(CONFIG_OF_LIBFDT) && defined(CONFIG_OF_BOARD_SETUP)
+static int disable_node(void *blob, const char *name, const char *path)
+{
+	int rc = fdt_find_and_setprop(blob, path, "status",
+				"disabled", sizeof("disabled"), 1);
+	if (rc) {
+		printf("Unable to update status property in %s node: err=%s\n",
+			name, fdt_strerror(rc));
+	}
+	return rc;
+}
+
+void ft_board_setup(void *blob, bd_t * bd)
+{
+	struct ventana_board_info *info = read_eeprom(0);
+	char *env;
+	int rc;
+
+	if (getenv("fdt_noauto")) {
+		printf("skiping ft_board_setup\n");
+		return;
+	}
+
+	if (!info) {
+		printf("invalid board info: Leaving DTB fully enabled\n");
+		return;
+	}
+
+	printf("Adjusting DTB per EEPROM configuraiton...\n");
+
+#if 0 // not necessary - driver will use mac that bootloader programmed
+	/* set FEC MAC addr */
+ 	env = getenv("ethaddr");
+	rc = fdt_find_and_setprop(blob, "/soc/aips-bus@02100000/ethernet@02188000",
+				"mac-address", env, strlen(env), 1);
+#endif
+
+	/* set SKY2 MAC addr */
+ 	env = getenv("eth1addr");
+	rc = fdt_find_and_setprop(blob, "/soc/aips-bus@02100000/pcie@01ffc000/sky2@8",
+				"mac-address", env, strlen(env), 1);
+
+	/* GPIO config: dio{0-3}
+	 * TODO: setup pinmux for GPIO vs PWM depending on info->config_dio<n> and/or env
+	 */
+
+	/* SDRAM config: sdram_{size,speed,width} */
+
+	/* CPU config: cpu_{speed,type} */
+
+	/* FLASH config: nor_flash_size, spi_flash_size */
+
+	/* Peripheral Config */
+	if (!info->config_eth0) {
+		disable_node(blob, "fec", "/soc/aips-bus@02100000/ethernet@02188000");
+	}
+	if (!info->config_eth1) { }
+	if (!info->config_sata) { }
+	if (!info->config_ssi0) {
+		disable_node(blob, "ssi1",
+			"/soc/aips-bus@02000000/spba-bus@02000000/ssi@02028000");
+	}
+	if (!info->config_ssi1) {
+		disable_node(blob, "ssi2",
+			"/soc/aips-bus@02000000/spba-bus@02000000/ssi@0202c000");
+	}
+	if (!info->config_ipu0) {
+		disable_node(blob, "ipu1", "/soc/ipu@02400000");
+	}
+	if (!info->config_ipu1) {
+		disable_node(blob, "ipu2", "/soc/ipu@02800000");
+	}
+	if (!info->config_mipi_csi) {
+		disable_node(blob, "mipi_csi", "/soc/aips-bus@02100000/mipi@021dc000");
+	}
+	if (!info->config_mipi_dsi) {
+		disable_node(blob, "mipi_dsi", "/soc/aips-bus@02100000/mipi@021e0000");
+	}
+	if (!info->config_tzasc0) {
+		disable_node(blob, "tzasc1", "/soc/aips-bus@02100000/tzasc@021d0000");
+	}
+	if (!info->config_tzasc1) {
+		disable_node(blob, "tzasc2", "/soc/aips-bus@02100000/tzasc@021d4000");
+	}
+	if (!info->config_caam) {
+		disable_node(blob, "caam", "/soc/aips-bus@02100000/caam@02100000");
+	}
+	if (!info->config_flexcan) {
+		disable_node(blob, "flexcan", "/soc/aips-bus@02000000/flexcan@02094000");
+	}
+	if (!info->config_vpu) {
+		disable_node(blob, "vpu", "/soc/aips-bus@02000000/vpu@02040000");
+	}
+	if (!info->config_i2c0) {
+		disable_node(blob, "i2c1", "/soc/aips-bus@02100000/i2c@021a0000");
+	}
+	if (!info->config_i2c1) {
+		disable_node(blob, "i2c2", "/soc/aips-bus@02100000/i2c@021a4000");
+	}
+	if (!info->config_i2c2) {
+		disable_node(blob, "i2c3", "/soc/aips-bus@02100000/i2c@021a8000");
+	}
+	if (!info->config_pcie) {
+		disable_node(blob, "pcie", "/soc/aips-bus@02100000/pcie@01ffc000");
+	}
+	if (!info->config_usb0) {
+		disable_node(blob, "usbh3", "/soc/aips-bus@02100000/usb@02184600");
+	}
+	if (!info->config_usb1) {
+		disable_node(blob, "usbotg",
+			"/soc/aips-bus@02000000/iomuxc@020e0000/usbotg");
+	}
+	if (!info->config_sd0) {
+		disable_node(blob, "sd1", "/soc/aips-bus@02100000/usdhc@02190000");
+	}
+	if (!info->config_sd1) {
+		disable_node(blob, "sd2", "/soc/aips-bus@02100000/usdhc@02194000");
+	}
+	if (!info->config_sd2) {
+		disable_node(blob, "sd3", "/soc/aips-bus@02100000/usdhc@02198000");
+	}
+	if (!info->config_sd3) {
+		disable_node(blob, "sd4", "/soc/aips-bus@02100000/usdhc@0219c000");
+	}
+	if (!info->config_uart0) {
+		disable_node(blob, "uart1",
+			"/soc/aips-bus@02000000/spba-bus@02000000/serial@02020000");
+	}
+	if (!info->config_uart1) {
+printf("leaving uart2 enabled - must be invalid eeprom\n");
+/*
+		disable_node(blob, "uart2",
+			"/soc/aips-bus@02100000/serial@021e8000");
+*/
+	}
+	if (!info->config_uart2) {
+		disable_node(blob, "uart3",
+			"/soc/aips-bus@02100000/serial@021ec000");
+	}
+	if (!info->config_uart3) {
+		disable_node(blob, "uart4",
+			"/soc/aips-bus@02100000/serial@021f0000");
+	}
+	if (!info->config_uart4) {
+		disable_node(blob, "uart5",
+			"/soc/aips-bus@02100000/serial@021f4000");
+	}
+	if (!info->config_espci0) {
+		disable_node(blob, "spi1",
+			"/soc/aips-bus@02000000/spba-bus@02000000/ecspi@02008000");
+	}
+	if (!info->config_espci1) {
+		disable_node(blob, "spi2",
+			"/soc/aips-bus@02000000/spba-bus@02000000/ecspi@0200c000");
+	}
+	if (!info->config_espci2) {
+		disable_node(blob, "spi3",
+			"/soc/aips-bus@02000000/spba-bus@02000000/ecspi@02010000");
+	}
+	if (!info->config_espci3) {
+		disable_node(blob, "spi4",
+			"/soc/aips-bus@02000000/spba-bus@02000000/ecspi@02014000");
+	}
+	if (!info->config_espci4) {
+		disable_node(blob, "spi5",
+			"/soc/aips-bus@02000000/spba-bus@02000000/ecspi@02018000");
+	}
+}
+#endif /* defined(CONFIG_OF_FLAT_TREE) && defined(CONFIG_OF_BOARD_SETUP) */
