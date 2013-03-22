@@ -60,6 +60,10 @@
 #define CONFIG_SF_DEFAULT_MODE (SPI_MODE_0)
 #endif
 
+/* Pass open firmware flat tree */
+//#define CONFIG_OF_LIBFDT	1
+#define CONFIG_OF_BOARD_SETUP 1
+
 /* I2C Configs */
 #define CONFIG_CMD_I2C
 #define CONFIG_I2C_MULTI_BUS
@@ -168,6 +172,8 @@
 #define CONFIG_BOOTDELAY	       3
 
 //#define CONFIG_PREBOOT                 ""
+#define CONFIG_FIT    1
+#define CONFIG_FIT_VERBOSE  1
 
 #define CONFIG_LOADADDR			       0x10800000
 #define CONFIG_SYS_TEXT_BASE	       0x17800000
@@ -235,7 +241,6 @@
 \
 	"serverip=192.168.1.146\0" \
 	"ipaddr=192.168.1.1\0" \
-	"ethaddr=00:D0:12:30:EE:FA\0" \
 	"clearenv=sf probe && sf erase 0x80000 0x2000 && echo resotred environment to factory defaults\0" \
 	"updateuboot=echo Updating uboot from ${serverip}:ventana/u-boot.imx ...; "\
 		"tftpboot 0x10800000 ventana/u-boot.imx && " \
@@ -256,7 +261,9 @@
 	"bootltib=setenv bootargs console=${console},${baudrate} root=/dev/mmcblk0p1 rootfstype=ext4 debug; mmc dev 0; ext2load mmc 0 0x10800000 /boot/uImage; bootm\0" \
 	"bootltib_net=tftp 0x10800000 ventana/uImage-ltib; setenv bootargs console=ttymxc1,115200 root=/dev/mmcblk0p1 rootfstype=ext4 debug; bootm\n" \
 	"bootowrt=setenv bootargs console=${console},${baudrate} root=/dev/ram0 rootfstype=ramfs debug; mmc dev 0; ext2load mmc 0 0x10800000 /boot/openwrt-imx61-uImage-gw5400; bootm\0" \
-	"bootowrt_net=tftp 0x10800000 ventana/openwrt-imx61-uImage-gw5400; setenv bootargs console=${console},${baudrate} root=/dev/ram0 rootfstype=ramfs debug; bootm\0"
+	"bootowrt_net=tftp 0x10800000 ventana/openwrt-imx61-uImage-gw5400; setenv bootargs console=${console},${baudrate} root=/dev/ram0 rootfstype=ramfs debug; bootm\0" \
+	"bootfdt=tftp 0x10800000 ventana/openwrt-imx61-uImage && tftp 0x10d00000 ventana/imx6q-gw5400.dtb && setenv bootargs console=${console},${baudrate} root=/dev/ram0 rootfstype=ramfs debug; bootm 0x10800000 - 0x10d00000\0" \
+	"bootfit=tftp 0x10800000 ventana/kernel_fdt.itb && setenv bootargs console=${console},${baudrate} root=/dev/ram0 rootfstype=ramfs debug; bootm\0"
 
 /*
 #define CONFIG_BOOTCOMMAND \
@@ -286,8 +293,9 @@
 #define CONFIG_SYS_LONGHELP
 #define CONFIG_SYS_HUSH_PARSER
 #define CONFIG_SYS_PROMPT	       "Ventana > "
+#define CONFIG_SYS_CBSIZE	       512
 #define CONFIG_AUTO_COMPLETE
-#define CONFIG_SYS_CBSIZE	       256
+#define CONFIG_CMDLINE_EDITING
 
 /* Print Buffer Size */
 #define CONFIG_SYS_PBSIZE (CONFIG_SYS_CBSIZE + sizeof(CONFIG_SYS_PROMPT) + 16)
@@ -299,8 +307,6 @@
 
 #define CONFIG_SYS_LOAD_ADDR	       CONFIG_LOADADDR
 #define CONFIG_SYS_HZ		       1000
-
-#define CONFIG_CMDLINE_EDITING
 
 /* Physical Memory Map */
 #define CONFIG_NR_DRAM_BANKS	       1
