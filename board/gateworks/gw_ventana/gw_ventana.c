@@ -1179,17 +1179,10 @@ void ft_board_setup(void *blob, bd_t * bd)
 
 	printf("Adjusting DTB per EEPROM configuraiton...\n");
 
-#if 0 // not necessary - driver will use mac that bootloader programmed
-	/* set FEC MAC addr */
- 	env = getenv("ethaddr");
-	rc = fdt_find_and_setprop(blob, "/soc/aips-bus@02100000/ethernet@02188000",
-				"mac-address", env, strlen(env), 1);
-#endif
-
-	/* set SKY2 MAC addr */
- 	env = getenv("eth1addr");
-	rc = fdt_find_and_setprop(blob, "/soc/aips-bus@02100000/pcie@01ffc000/sky2@8",
-				"mac-address", env, strlen(env), 1);
+	/* Note that fdt_fixup_ethernet is called in arm/lib/bootm before this
+	 * which sets mac-address and local-mac-address properties of
+	 * ethernet<n> aliases to ethaddr...eth<n>addr env
+	 */
 
 	/* GPIO config: dio{0-3}
 	 * TODO: setup pinmux for GPIO vs PWM depending on info->config_dio<n> and/or env
