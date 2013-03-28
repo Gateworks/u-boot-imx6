@@ -23,11 +23,11 @@
 #define __CONFIG_H
 
 #define CONFIG_MX6
-#define CONFIG_MX6Q
-#define CONFIG_DISPLAY_CPUINFO
-#define CONFIG_DISPLAY_BOARDINFO
+#define CONFIG_MX6Q              /* i.MX6Q CPU */
+#define CONFIG_DISPLAY_CPUINFO   /* display cpu info */
+#define CONFIG_DISPLAY_BOARDINFO /* display board info */
 
-#define CONFIG_MACH_TYPE	4520
+#define CONFIG_MACH_TYPE	4520   /* Gateworks Ventana Platform */
 
 #include <asm/arch/imx-regs.h>
 #include <asm/imx-common/gpio.h>
@@ -42,27 +42,29 @@
 /* Size of malloc() pool */
 #define CONFIG_SYS_MALLOC_LEN		(10 * 1024 * 1024)
 
+/* Init Functions */
 #define CONFIG_BOARD_EARLY_INIT_F
 #define CONFIG_MISC_INIT_R
 #define CONFIG_MXC_GPIO
 
+/* Serial */
 #define CONFIG_MXC_UART
 #define CONFIG_MXC_UART_BASE	       UART2_BASE
 
+/* SPI Configs */
 #define CONFIG_CMD_SF
 #ifdef CONFIG_CMD_SF
 #define CONFIG_SPI_FLASH
 #define CONFIG_SPI_FLASH_WINBOND
+#define CONFIG_SPI_FLASH_WINBOND_ERASESIZE 64*1024  // 4,32,64K for W26Q256
 #define CONFIG_MXC_SPI
 #define CONFIG_SF_DEFAULT_BUS  0
-#define CONFIG_SF_DEFAULT_CS   (0|(IMX_GPIO_NR(3, 19)<<8)) // GPIO 3-19 SPI_CS1
-#define CONFIG_SF_DEFAULT_SPEED 25000000
+#define CONFIG_SF_DEFAULT_CS   (0|(IMX_GPIO_NR(3, 19)<<8)) // GPIO 3-19 SPI_CS1 (21248)
+/* ecspi_clk is 60MHz/1 and W25Q256FV can go up to 80MHz */
+#define CONFIG_SF_DEFAULT_SPEED 30000000
+//#define CONFIG_SF_DEFAULT_SPEED 25000000
 #define CONFIG_SF_DEFAULT_MODE (SPI_MODE_0)
 #endif
-
-/* Pass open firmware flat tree */
-//#define CONFIG_OF_LIBFDT	1
-#define CONFIG_OF_BOARD_SETUP 1
 
 /* I2C Configs */
 #define CONFIG_CMD_I2C
@@ -93,18 +95,19 @@
 #define CONFIG_SYS_FSL_ESDHC_ADDR      0
 #define CONFIG_SYS_FSL_USDHC_NUM       1
 
+/* MMC Support */
 #define CONFIG_MMC
 #define CONFIG_CMD_MMC
 #define CONFIG_GENERIC_MMC
 #define CONFIG_BOUNCE_BUFFER
-#define CONFIG_CMD_EXT2
-#define CONFIG_CMD_FAT
+
+/* Filesystem support */
 #define CONFIG_DOS_PARTITION
 
-#define CONFIG_CMD_SATA
 /*
  * SATA Configs
  */
+#define CONFIG_CMD_SATA
 #ifdef CONFIG_CMD_SATA
 #define CONFIG_DWC_AHSATA
 #define CONFIG_SYS_SATA_MAX_DEVICE	1
@@ -114,10 +117,19 @@
 #define CONFIG_LIBATA
 #endif
 
+/* Various command support */
+#include <config_cmd_default.h>
+#undef CONFIG_CMD_IMLS
 #define CONFIG_CMD_PING
 #define CONFIG_CMD_DHCP
 #define CONFIG_CMD_MII
 #define CONFIG_CMD_NET
+#define CONFIG_CMD_EXT2
+#define CONFIG_CMD_FAT
+#define CONFIG_CMD_BMODE /* set eFUSE shadow for a boot device and soft-reset */
+#define CONFIG_CMD_BOOTZ
+
+/* Ethernet support */
 #define CONFIG_FEC_MXC
 #define CONFIG_MII
 #define IMX_FEC_BASE			ENET_BASE_ADDR
@@ -130,7 +142,6 @@
 
 /* USB Configs */
 #define CONFIG_CMD_USB
-#define CONFIG_CMD_FAT
 #define CONFIG_USB_EHCI
 #define CONFIG_USB_EHCI_MX6
 #define CONFIG_USB_STORAGE
@@ -140,11 +151,6 @@
 #define CONFIG_MXC_USB_PORT	1
 #define CONFIG_MXC_USB_PORTSC	(PORT_PTS_UTMI | PORT_PTS_PTW)
 #define CONFIG_MXC_USB_FLAGS	0
-
-/* Miscellaneous commands - this is a bmode command that will set eFUSE shadow
- *  for a boot device and soft-reset
- */
-#define CONFIG_CMD_BMODE
 
 /* Framebuffer and LCD */
 #define CONFIG_VIDEO
@@ -159,19 +165,13 @@
 #define CONFIG_VIDEO_LOGO
 #define CONFIG_IPUV3_CLK 260000000
 
-/* allow to overwrite serial and ethaddr */
-#define CONFIG_ENV_OVERWRITE
-#define CONFIG_CONS_INDEX	       1
-#define CONFIG_BAUDRATE			       115200
-
-/* Command definition */
-#include <config_cmd_default.h>
-
-#undef CONFIG_CMD_IMLS
-
+/* serial console (ttymxc1,115200) */
+#define CONFIG_CONS_INDEX	   1
+#define CONFIG_BAUDRATE			 115200
 #define CONFIG_BOOTDELAY	       3
-
 //#define CONFIG_PREBOOT                 ""
+
+/* New uImage format */
 #define CONFIG_FIT    1
 #define CONFIG_FIT_VERBOSE  1
 
@@ -184,7 +184,7 @@
 	"console=ttymxc1\0" \
 	"fdt_high=0xffffffff\0" \
 	"initrd_high=0xffffffff\0" \
-	"fdt_file=imx6q-sabrelite.dtb\0" \
+	"fdt_file=imx6q-gw5400.dtb\0" \
 	"fdt_addr=0x11000000\0" \
 	"boot_fdt=try\0" \
 	"ip_dyn=yes\0" \
@@ -241,7 +241,7 @@
 \
 	"serverip=192.168.1.146\0" \
 	"ipaddr=192.168.1.1\0" \
-	"clearenv=sf probe && sf erase 0x80000 0x2000 && echo resotred environment to factory defaults\0" \
+	"clearenv=sf probe && sf erase 0x80000 0x10000 && echo resotred environment to factory defaults\0" \
 	"updateuboot=echo Updating uboot from ${serverip}:ventana/u-boot.imx ...; "\
 		"tftpboot 0x10800000 ventana/u-boot.imx && " \
 		"sf probe && " \
@@ -258,14 +258,30 @@
 		"setenv bootargs console=${console},${baudrate} root=${root} ${video} ${debug} && " \
 		"bootm\0" \
 	\
-	"bootltib=setenv bootargs console=${console},${baudrate} root=/dev/mmcblk0p1 rootfstype=ext4 debug; mmc dev 0; ext2load mmc 0 0x10800000 /boot/uImage; bootm\0" \
-	"bootltib_net=tftp 0x10800000 ventana/uImage-ltib; setenv bootargs console=ttymxc1,115200 root=/dev/mmcblk0p1 rootfstype=ext4 debug; bootm\n" \
-	"bootowrt=setenv bootargs console=${console},${baudrate} root=/dev/ram0 rootfstype=ramfs debug; mmc dev 0; ext2load mmc 0 0x10800000 /boot/openwrt-imx61-uImage-gw5400; bootm\0" \
-	"bootowrt_net=tftp 0x10800000 ventana/openwrt-imx61-uImage-gw5400; setenv bootargs console=${console},${baudrate} root=/dev/ram0 rootfstype=ramfs debug; bootm\0" \
 	"bootfdt=tftp 0x10800000 ventana/openwrt-imx61-uImage && tftp 0x10d00000 ventana/imx6q-gw5400.dtb && setenv bootargs console=${console},${baudrate} root=/dev/ram0 rootfstype=ramfs debug; bootm 0x10800000 - 0x10d00000\0" \
-	"bootfit=tftp 0x10800000 ventana/kernel_fdt.itb && setenv bootargs console=${console},${baudrate} root=/dev/ram0 rootfstype=ramfs debug; bootm\0"
+	"bootfit=tftp 0x10800000 ventana/kernel_fdt.itb && setenv bootargs console=${console},${baudrate} root=/dev/ram0 rootfstype=ramfs debug; bootm\0" \
+	\
+	"bootowrt=sf probe && sf read 0x10800000 0x00100000 0x200000 && setenv bootargs console=${console},${baudrate} root=/dev/mtdblock3 rootfstype=squashfs,jffs2 ${debug} && bootm\0" \
+	\
+	"bootmmc=mmc dev 0 && sleep 1 && mmc rescan && " \
+		"ext2load mmc 0:1 0x10800000 boot/uImage && " \
+		"setenv bootargs console=${console},${baudrate} root=${root} ${video} ${debug} && " \
+		"bootm\0" \
+	\
+	"update=sf probe && " \
+		"sf erase 0x00090000 0x0f70000 && " \
+		"tftp 0x10800000 ventana/kernel_fdt.itb && " \
+		"sf write 0x10800000 0x0100000 ${filesize} && " \
+		"tftp 0x10800000 ventana/openwrt-imx61-squashfs.img && " \
+		"sf write 0x10800000 0x00300000 ${filesize}\0"
 
-/*
+#define CONFIG_BOOTCOMMAND \
+	"sf probe && " \
+		"sf read 0x10800000 0x00100000 0x200000 && " \
+		"setenv bootargs console=${console},${baudrate} root=/dev/mtdblock3 rootfstype=squashfs,jffs2 ${debug} && " \
+		"bootm" 
+
+/* sabrelite - boot mmc w/ bootscript else netboot
 #define CONFIG_BOOTCOMMAND \
 	   "mmc dev ${mmcdev};" \
 	   "mmc dev ${mmcdev}; if mmc rescan; then " \
@@ -280,12 +296,14 @@
 	   "else run netboot; fi"
 */
 
+/* boot yocto
 #define CONFIG_BOOTCOMMAND \
 	"mmc dev 0; " \
 	"mmc dev 0; if mmc rescan; then " \
 		"ext2load mmc 0:1 0x10800000 boot/uImage && " \
 		"setenv bootargs console=${console},${baudrate} root=${root} ${video} ${debug} && " \
-		"bootm; fi" \
+		"bootm; fi"
+*/
 
 #define CONFIG_ARP_TIMEOUT     200UL
 
@@ -323,27 +341,32 @@
        (CONFIG_SYS_INIT_RAM_ADDR + CONFIG_SYS_INIT_SP_OFFSET)
 
 /* FLASH and environment organization */
-#define CONFIG_SYS_NO_FLASH
+#define CONFIG_SYS_NO_FLASH  // NOR flash
+//#define CONFIG_HAS_DATAFLASH 1
+//#define CONFIG_SYS_MAX_DATAFLASH_BANKS 1
 
+/* Persistent Environment Config */
+#define CONFIG_ENV_OVERWRITE       /* allow to overwrite serial and ethaddr */
 #define CONFIG_ENV_SIZE			(8 * 1024)
-
-//#define CONFIG_ENV_IS_IN_MMC
 #define CONFIG_ENV_IS_IN_SPI_FLASH
-
+//#define CONFIG_ENV_IS_IN_MMC
 #if defined(CONFIG_ENV_IS_IN_MMC)
 #define CONFIG_ENV_OFFSET		(6 * 64 * 1024)
 #define CONFIG_SYS_MMC_ENV_DEV		0
 #elif defined(CONFIG_ENV_IS_IN_SPI_FLASH)
 #define CONFIG_ENV_OFFSET		(512 * 1024)
-#define CONFIG_ENV_SECT_SIZE		(8 * 1024)
+//#define CONFIG_ENV_SECT_SIZE		(8 * 1024)
+#define CONFIG_ENV_SECT_SIZE		(64 * 1024)
 #define CONFIG_ENV_SPI_BUS		CONFIG_SF_DEFAULT_BUS
 #define CONFIG_ENV_SPI_CS		CONFIG_SF_DEFAULT_CS
 #define CONFIG_ENV_SPI_MODE		CONFIG_SF_DEFAULT_MODE
 #define CONFIG_ENV_SPI_MAX_HZ		CONFIG_SF_DEFAULT_SPEED
 #endif
 
+/* Pass open firmware flat tree */
+//#define CONFIG_OF_LIBFDT	1
+#define CONFIG_OF_BOARD_SETUP 1
 #define CONFIG_OF_LIBFDT
-#define CONFIG_CMD_BOOTZ
 
 #ifndef CONFIG_SYS_DCACHE_OFF
 #define CONFIG_CMD_CACHE
