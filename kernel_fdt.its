@@ -10,7 +10,7 @@
 
 	images {
 		kernel@1 {
-			description = "Vanilla Linux kernel";
+			description = "Linux kernel";
 			data = /incbin/("/tftpboot/ventana/openwrt-imx61-zImage");
 			type = "kernel";
 			arch = "arm";
