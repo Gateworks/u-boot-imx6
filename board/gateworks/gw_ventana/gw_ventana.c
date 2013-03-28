@@ -1164,8 +1164,11 @@ static int disable_node(void *blob, const char *name, const char *path)
 void ft_board_setup(void *blob, bd_t * bd)
 {
 	struct ventana_board_info *info = read_eeprom(0);
-	char *env;
-	int rc;
+#if 0
+	struct node_info nodes[] = {
+		{ "sst,w25q256",    MTD_DEV_TYPE_NAND, },
+	};
+#endif
 
 	if (getenv("fdt_noauto")) {
 		printf("skiping ft_board_setup\n");
@@ -1183,6 +1186,11 @@ void ft_board_setup(void *blob, bd_t * bd)
 	 * which sets mac-address and local-mac-address properties of
 	 * ethernet<n> aliases to ethaddr...eth<n>addr env
 	 */
+
+#if 0
+	/* MTD partitions */
+	fdt_fixup_mtdparts(blob, nodes, ARRAY_SIZE(nodes));
+#endif
 
 	/* GPIO config: dio{0-3}
 	 * TODO: setup pinmux for GPIO vs PWM depending on info->config_dio<n> and/or env
@@ -1290,8 +1298,11 @@ printf("leaving uart2 enabled - must be invalid eeprom\n");
 			"/soc/aips-bus@02100000/serial@021f4000");
 	}
 	if (!info->config_espci0) {
+printf("leaving spi1 enabled - must be invalid eeprom\n");
+/*
 		disable_node(blob, "spi1",
 			"/soc/aips-bus@02000000/spba-bus@02000000/ecspi@02008000");
+*/
 	}
 	if (!info->config_espci1) {
 		disable_node(blob, "spi2",
