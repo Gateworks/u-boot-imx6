@@ -221,6 +221,7 @@ int spi_flash_cmd_erase(struct spi_flash *flash, u32 offset, size_t len)
 
 		debug("SF: erase %2x %2x %2x %2x (%x)\n", cmd[0], cmd[1],
 		      cmd[2], cmd[3], offset);
+printf("SF: erase block:%2x (%x)\n", cmd[1], offset);
 
 		ret = spi_flash_cmd_write_enable(flash);
 		if (ret)
