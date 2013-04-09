@@ -24,6 +24,8 @@
 #ifndef _SYS_PROTO_H_
 #define _SYS_PROTO_H_
 
+#include <asm/imx-common/regs-common.h>
+
 #define MXC_CPU_MX51		0x51
 #define MXC_CPU_MX53		0x53
 #define MXC_CPU_MX6SL		0x60
@@ -51,4 +53,12 @@ u32 get_periph_clk(void);
 int imx_otp_read_one_u32(u32, u32 *);
 int imx_otp_blow_one_u32(u32, u32, u32 *);
 void enable_otp_clk(unsigned char);
+
+int mxs_reset_block(struct mxs_register_32 *reg);
+int mxs_wait_mask_set(struct mxs_register_32 *reg,
+		       uint32_t mask,
+		       unsigned int timeout);
+int mxs_wait_mask_clr(struct mxs_register_32 *reg,
+		       uint32_t mask,
+		       unsigned int timeout);
 #endif
