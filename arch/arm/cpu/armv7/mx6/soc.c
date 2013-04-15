@@ -30,6 +30,8 @@
 #include <asm/arch/clock.h>
 #include <asm/arch/sys_proto.h>
 #include <asm/imx-common/boot_mode.h>
+#include <asm/imx-common/dma.h>
+#include <stdbool.h>
 
 struct scu_regs {
 	u32	ctrl;
@@ -126,6 +128,11 @@ int arch_cpu_init(void)
 	init_aips();
 
 	set_vddsoc(1200);	/* Set VDDSOC to 1.2V */
+
+#ifdef CONFIG_APBH_DMA
+	/* Start APBH DMA */
+	mxs_dma_init();
+#endif
 
 	return 0;
 }
