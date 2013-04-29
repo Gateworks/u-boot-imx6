@@ -49,6 +49,7 @@ void enable_usboh3_clk(unsigned char enable)
 	__raw_writel(reg, &imx_ccm->CCGR6);
 
 }
+
 #ifdef CONFIG_IMX_OTP
 void enable_otp_clk(unsigned char enable)
 {
