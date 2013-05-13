@@ -118,8 +118,9 @@
 #define CONFIG_MXC_USB_PORTSC	(PORT_PTS_UTMI | PORT_PTS_PTW)
 #define CONFIG_MXC_USB_FLAGS	0
 
-/* Miscellaneous commands */
+/* imx6 commands */
 #define CONFIG_CMD_BMODE
+#define CONFIG_CMD_HDMIDETECT
 
 /* Framebuffer and LCD */
 #define CONFIG_VIDEO
