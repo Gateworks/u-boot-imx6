@@ -188,8 +188,10 @@ static iomux_v3_cfg_t const gpio_pads[] = {
 	MX6Q_PAD_SD4_DAT3__GPIO_2_11 | MUX_PAD_CTRL(NO_PAD_CTRL),
 	// DIOI2C_DIS#
 	MX6Q_PAD_GPIO_19__GPIO_4_5 | MUX_PAD_CTRL(NO_PAD_CTRL),
-	// PCI6EXP_IO0-1
+
+	// PCI6EXP_IO0 - PWREN#
 	MX6Q_PAD_KEY_ROW0__GPIO_4_7 | MUX_PAD_CTRL(NO_PAD_CTRL),
+	// PCI6EXP_IO1 - IRQ# 
 	MX6Q_PAD_KEY_ROW1__GPIO_4_9 | MUX_PAD_CTRL(NO_PAD_CTRL),
 
 	// PCIECK_SSON
@@ -291,6 +293,7 @@ int board_mmc_init(bd_t *bis)
  */
 static struct ventana_board_info *read_eeprom(int display)
 {
+#if 1
 	int i;
 	int chksum;
 	static struct ventana_board_info board_info;
@@ -335,6 +338,9 @@ static struct ventana_board_info *read_eeprom(int display)
 
 //printf("board info valid\n");
 	return info;
+#else
+	return NULL;
+#endif
 }
 
 
@@ -495,6 +501,10 @@ static void setup_gpio(void)
 	gpio_direction_input(IMX_GPIO_NR(1, 19));
 	gpio_direction_input(IMX_GPIO_NR(2, 9));
 	gpio_direction_input(IMX_GPIO_NR(2, 10));
+
+	/* default Expansion board DIO's */
+	gpio_direction_output(IMX_GPIO_NR(4, 7), 0); // PWREN#
+	gpio_direction_input(IMX_GPIO_NR(4, 9));     // IRQ#
 }
 
 static int setup_pcie(void)
@@ -1140,8 +1150,10 @@ int misc_init_r(void)
 	}
 */
 
-	get_mac("ethaddr", info->mac0);
-	get_mac("eth1addr", info->mac1);
+	if (info) {
+		get_mac("ethaddr", info->mac0);
+		get_mac("eth1addr", info->mac1);
+	}
 
 #ifdef CONFIG_CMD_BMODE
 	add_board_boot_modes(board_boot_modes);

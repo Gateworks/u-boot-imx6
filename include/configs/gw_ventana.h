@@ -124,7 +124,9 @@
 #define CONFIG_CMD_NET
 #define CONFIG_CMD_EXT2
 #define CONFIG_CMD_FAT
-#define CONFIG_CMD_BMODE /* set eFUSE shadow for a boot device and soft-reset */
+#define CONFIG_CMD_BMODE         /* set eFUSE shadow for a boot dev and reset */
+#define CONFIG_CMD_HDMIDETECT    /* detect HDMI output device */
+#define CONFIG_CMD_SETEXPR
 #define CONFIG_CMD_BOOTZ
 
 /* Ethernet support */
@@ -164,52 +166,6 @@
 
 /* serial console (ttymxc1,115200) */
 #define CONFIG_CONS_INDEX         1
-#define CONFIG_BAUDRATE           115200
-#define CONFIG_BOOTDELAY          3
-
-#define CONFIG_EXTRA_ENV_SETTINGS \
-	"script=boot.scr\0" \
-	"console=ttymxc1\0" \
-	"fdt_high=0xffffffff\0" \
-	"ip_dyn=yes\0" \
-	"serverip=192.168.1.146\0" \
-	"ipaddr=192.168.1.1\0" \
-	"root=/dev/mtdblock3 rootfstype=squashfs,jffs2\0" \
-	"video=\0" \
-	"video_hdmi=mxcfb0:dev=hdmi,1280x720M@60,if=RGB24\0" \
-	"video_lvds1=mxcfb0:dev=ldb,LDB-XGA,if=RGB666\0" \
-	"image=ventana/uImage\0" \
-	"debug=debug\0" \
-	\
-	"bootnet=tftp 0x10800000 ventana/${image} && " \
-		"setenv bootargs console=${console},${baudrate} root=${root} ${video} ${debug} && " \
-		"bootm\0" \
-	\
-	"bootmmc=mmc dev 0 && sleep 1 && mmc rescan && " \
-		"ext2load mmc 0:1 0x10800000 boot/${image} && " \
-		"setenv bootargs console=${console},${baudrate} root=${root} ${video} ${debug} && " \
-		"bootm\0" \
-	\
-	"clearenv=sf probe && " \
-		"sf erase 0x80000 0x10000 && " \
-		"echo resotred environment to factory defaults\0" \
-	\
-	"updateuboot=echo Updating uboot from ${serverip}:ventana/u-boot.imx ...; "\
-		"tftpboot 0x10800000 ventana/u-boot.imx && " \
-		"sf probe && " \
-		"sf erase 0 0x80000 && " \
-		"sf write 0x10800000 0x400 ${filesize}\0" 	\
-	\
-	"update=sf probe && " \
-		"sf erase 0x00090000 0x0f70000 && " \
-		"tftp 0x10800000 ventana/openwrt-imx61-imx6q-gw5400-squashfs.bin && " \
-		"sf write 0x10800000 0x00090000 ${filesize}\0"
-
-#define CONFIG_BOOTCOMMAND \
-	"sf probe && " \
-		"sf read 0x10800000 0x00090000 0x200000 && " \
-		"setenv bootargs console=${console},${baudrate} root=${root} ${debug} && " \
-		"bootm" 
 
 /* Miscellaneous configurable options */
 #define CONFIG_SYS_LONGHELP
@@ -264,6 +220,90 @@
 #define CONFIG_ENV_SPI_MODE            CONFIG_SF_DEFAULT_MODE
 #define CONFIG_ENV_SPI_MAX_HZ          CONFIG_SF_DEFAULT_SPEED
 #endif
+
+/* Environment */
+#define CONFIG_BAUDRATE           115200
+#define CONFIG_BOOTDELAY          3
+#define CONFIG_LOADADDR           CONFIG_SYS_LOAD_ADDR
+#define CONFIG_IPADDR             192.168.1.1
+#define CONFIG_SERVERIP           192.168.1.146
+
+#define CONFIG_EXTRA_ENV_SETTINGS \
+	"script=boot/6x_bootscript-ventana\0" \
+	"uimage=boot/uImage\0" \
+	"console=ttymxc1\0" \
+	"fdt_high=0xffffffff\0" \
+	"ip_dyn=yes\0" \
+	"fdt_file=ventana.dtb\0" \
+	"fdt_addr=0x11000000\0" \
+	"fs=ext2\0" \
+	"video=\0" \
+	"extra=debug\0" \
+	\
+	"spidev=\0" \
+	"spi_koffset=0x90000\0" \
+	"spi_klen=0x200000\0" \
+	"spiroot=/dev/mtdblock3 rootfstype=squashfs,jffs2\0" \
+	"spiargs=setenv bootargs console=${console},${baudrate} " \
+		"root=${spiroot} ${video} ${extra}\0" \
+	"spiboot=echo Booting from spi flash ...; " \
+		"sf probe; " \
+		"sf read ${loadaddr} ${spi_koffset} ${spi_klen}; " \
+		"run spiargs; " \
+		"bootm\0" \
+	\
+	"mmcdev=0\0" \
+	"mmcpart=1\0" \
+	"mmcroot=/dev/mmcblk0p1 rootwait rw\0" \
+	"mmcargs=setenv bootargs console=${console},${baudrate} " \
+		"root=${mmcroot} ${video} ${extra}\0" \
+	"loadbootscript=" \
+		"${fs}load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${script};\0" \
+	"bootscript=echo Running bootscript from mmc ...; " \
+		"source\0" \
+	"loaduimage=${fs}load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${uimage}\0" \
+	"loadfdt=${fs}load mmc ${mmcdev}:${mmcpart} ${fdt_addr} ${fdt_file}\0" \
+	"mmcboot=echo Booting from mmc ...; " \
+		"run mmcargs; " \
+		"if test ${boot_fdt} = yes || test {boot_fdt} = try; then " \
+			"if run loadfdt; then " \
+				"bootm ${loadaddr} - ${fdt_addr}; " \
+			"else " \
+				"if test ${boot_fdt} = try; then " \
+					"bootm; " \
+				"else " \
+					"echo WARN: Cannot load the DT; " \
+				"fi; " \
+			"fi; " \
+		"else " \
+			"bootm; " \
+		"fi;\0" \
+	\
+	"clearenv=sf probe && " \
+		"sf erase 80000 10000 && " \
+		"echo resotred environment to factory defaults\0" \
+	\
+	"image_uboot=ventana/u-boot.imx\0" \
+	"image_os=ventana/openwrt-imx61-imx6q-gw5400-squashfs.bin\0" \
+	"updateuboot=echo Updating uboot from ${serverip}:${image_uboot} ...; " \
+		"tftpboot ${loadaddr} ${image_uboot} && " \
+		"sf probe && sf erase 0 80000 && sf write ${loadaddr} 400 ${filesize}\0"	\
+	"update=echo Updating OS from ${serverip}:${image_os} ...; " \
+		"tftp ${loadaddr} ${image_os} && " \
+		"sf probe && sf update ${loadaddr} ${spi_koffset} ${filesize}\0"
+
+#define CONFIG_BOOTCOMMAND \
+	"mmc dev ${mmcdev};" \
+	"mmc dev ${mmcdev}; if mmc rescan; then " \
+		"if run loadbootscript; then " \
+			"run bootscript; " \
+		"else " \
+			"if run loaduimage; then " \
+				"run mmcboot; " \
+			"else run spiboot; " \
+			"fi; " \
+		"fi; " \
+	"else run spiboot; fi"
 
 /* Flattened Image Tree Suport */
 #define CONFIG_FIT
