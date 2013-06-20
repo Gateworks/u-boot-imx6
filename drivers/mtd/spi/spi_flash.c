@@ -390,6 +390,10 @@ struct spi_flash *spi_flash_probe(unsigned int bus, unsigned int cs,
 	print_size(flash->sector_size, ", total ");
 	print_size(flash->size, "\n");
 
+#ifdef CONFIG_SPI_FLASH_MTD
+	spi_flash_mtd_init(flash);
+#endif
+
 	spi_release_bus(spi);
 
 	return flash;
