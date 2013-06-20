@@ -402,6 +402,12 @@ esdhc_send_cmd(struct mmc *mmc, struct mmc_cmd *cmd, struct mmc_data *data)
 				return COMM_ERR;
 		} while (!(irqstat & IRQSTAT_TC) &&
 				(esdhc_read32(&regs->prsstat) & PRSSTAT_DLA));
+#ifdef CONFIG_MX6
+		/* In imx6 TC (data end) interrupt sometimes occur earlier
+		   than DMA completes. In this case just wait a little more. */ 
+		while (!(irqstat & (IRQSTAT_DINT | IRQSTAT_DMAE)))
+			irqstat = esdhc_read32(&regs->irqstat);
+#endif
 #endif
 	}
 
