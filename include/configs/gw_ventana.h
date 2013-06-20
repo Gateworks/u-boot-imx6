@@ -19,6 +19,9 @@
  * MA 02111-1307 USA
  */
 
+/**
+ * Gateworks Ventana board config - NAND based boot device
+ */
 #ifndef __CONFIG_H
 #define __CONFIG_H
 
@@ -53,19 +56,6 @@
 #define CONFIG_MXC_UART
 #define CONFIG_MXC_UART_BASE	       UART2_BASE
 
-/* SPI */
-#define CONFIG_CMD_SF
-#ifdef CONFIG_CMD_SF
-#define CONFIG_MXC_SPI
-#define CONFIG_SPI_FLASH
-#define CONFIG_SPI_FLASH_WINBOND
-#define CONFIG_SPI_FLASH_WINBOND_ERASESIZE 64*1024  // 4,32,64K for W26Q256
-#define CONFIG_SF_DEFAULT_BUS              0
-#define CONFIG_SF_DEFAULT_CS               (0|(IMX_GPIO_NR(3, 19)<<8)) // GPIO 3-19 (21248)
-#define CONFIG_SF_DEFAULT_SPEED            30000000
-#define CONFIG_SF_DEFAULT_MODE             (SPI_MODE_0)
-#endif
-
 /* I2C Configs */
 #define CONFIG_CMD_I2C
 #define CONFIG_I2C_MULTI_BUS
@@ -75,11 +65,11 @@
 /* OCOTP Configs */
 #define CONFIG_CMD_IMXOTP
 #ifdef CONFIG_CMD_IMXOTP
-#define CONFIG_IMX_OTP
-#define IMX_OTP_BASE            OCOTP_BASE_ADDR
-#define IMX_OTP_ADDR_MAX        0x7F
-#define IMX_OTP_DATA_ERROR_VAL  0xBADABADA
-#define IMX_OTPWRITE_ENABLED
+  #define CONFIG_IMX_OTP
+  #define IMX_OTP_BASE            OCOTP_BASE_ADDR
+  #define IMX_OTP_ADDR_MAX        0x7F
+  #define IMX_OTP_DATA_ERROR_VAL  0xBADABADA
+  #define IMX_OTPWRITE_ENABLED
 #endif
 
 /* PWM Configs */
@@ -100,6 +90,9 @@
 #define CONFIG_BOUNCE_BUFFER
 
 /* Filesystem support */
+#define CONFIG_CMD_EXT2
+#define CONFIG_CMD_FAT
+#define CONFIG_CMD_UBIFS
 #define CONFIG_DOS_PARTITION
 
 /*
@@ -107,12 +100,12 @@
  */
 #define CONFIG_CMD_SATA
 #ifdef CONFIG_CMD_SATA
-#define CONFIG_DWC_AHSATA
-#define CONFIG_SYS_SATA_MAX_DEVICE	1
-#define CONFIG_DWC_AHSATA_PORT_ID	0
-#define CONFIG_DWC_AHSATA_BASE_ADDR	SATA_ARB_BASE_ADDR
-#define CONFIG_LBA48
-#define CONFIG_LIBATA
+  #define CONFIG_DWC_AHSATA
+  #define CONFIG_SYS_SATA_MAX_DEVICE	1
+  #define CONFIG_DWC_AHSATA_PORT_ID	0
+  #define CONFIG_DWC_AHSATA_BASE_ADDR	SATA_ARB_BASE_ADDR
+  #define CONFIG_LBA48
+  #define CONFIG_LIBATA
 #endif
 
 /* Various command support */
@@ -122,12 +115,14 @@
 #define CONFIG_CMD_DHCP
 #define CONFIG_CMD_MII
 #define CONFIG_CMD_NET
-#define CONFIG_CMD_EXT2
-#define CONFIG_CMD_FAT
 #define CONFIG_CMD_BMODE         /* set eFUSE shadow for a boot dev and reset */
 #define CONFIG_CMD_HDMIDETECT    /* detect HDMI output device */
 #define CONFIG_CMD_SETEXPR
 #define CONFIG_CMD_BOOTZ
+#define CONFIG_CMD_GSC
+#define CONFIG_CMD_UBI
+#define CONFIG_RBTREE
+#define CONFIG_LZO
 
 /* Ethernet support */
 #define CONFIG_FEC_MXC
@@ -174,6 +169,7 @@
 #define CONFIG_SYS_CBSIZE	             512
 #define CONFIG_AUTO_COMPLETE
 #define CONFIG_CMDLINE_EDITING
+#define CONFIG_HWCONFIG
 
 /* Print Buffer Size */
 #define CONFIG_SYS_PBSIZE (CONFIG_SYS_CBSIZE + sizeof(CONFIG_SYS_PROMPT) + 16)
@@ -202,23 +198,49 @@
        (CONFIG_SYS_INIT_RAM_ADDR + CONFIG_SYS_INIT_SP_OFFSET)
 
 /* FLASH and environment organization */
-#define CONFIG_SYS_NO_FLASH  // NOR flash
+#define CONFIG_SYS_NO_FLASH  /* no NOR flash */
+
+/*
+ * MTD Command for mtdparts
+ */
+#define CONFIG_CMD_MTDPARTS
+#define CONFIG_MTD_DEVICE
+//#define CONFIG_FLASH_CFI_MTD
+#define CONFIG_MTD_PARTITIONS
+#define MTDIDS_DEFAULT    "nand0=nand"
+#define MTDPARTS_DEFAULT  "mtdparts=nand:16m(uboot),1m(env),-(rootfs)"
+
+/* Enable NAND support */
+#define CONFIG_CMD_TIME
+#define CONFIG_CMD_NAND
+#define CONFIG_CMD_NAND_TRIMFFS
+#ifdef CONFIG_CMD_NAND
+  #define CONFIG_NAND_MXS
+  #define CONFIG_SYS_MAX_NAND_DEVICE	1
+  #define CONFIG_SYS_NAND_BASE		0x40000000
+  #define CONFIG_SYS_NAND_5_ADDR_CYCLE
+  #define CONFIG_SYS_NAND_ONFI_DETECTION
+
+  /* DMA stuff, needed for GPMI/MXS NAND support */
+  #define CONFIG_APBH_DMA
+  #define CONFIG_APBH_DMA_BURST
+  #define CONFIG_APBH_DMA_BURST8
+#endif
 
 /* Persistent Environment Config */
-#define CONFIG_ENV_OVERWRITE           /* allow to overwrite serial and ethaddr */
-#define CONFIG_ENV_SIZE                (8 * 1024)
-#define CONFIG_ENV_IS_IN_SPI_FLASH
+#define CONFIG_ENV_OVERWRITE    /* allow to overwrite serial and ethaddr */
 //#define CONFIG_ENV_IS_IN_MMC
+#define CONFIG_ENV_IS_IN_NAND
 #if defined(CONFIG_ENV_IS_IN_MMC)
-#define CONFIG_ENV_OFFSET              (6 * 64 * 1024)
-#define CONFIG_SYS_MMC_ENV_DEV         0
-#elif defined(CONFIG_ENV_IS_IN_SPI_FLASH)
-#define CONFIG_ENV_OFFSET              (512 * 1024)
-#define CONFIG_ENV_SECT_SIZE           (64 * 1024)
-#define CONFIG_ENV_SPI_BUS             CONFIG_SF_DEFAULT_BUS
-#define CONFIG_ENV_SPI_CS              CONFIG_SF_DEFAULT_CS
-#define CONFIG_ENV_SPI_MODE            CONFIG_SF_DEFAULT_MODE
-#define CONFIG_ENV_SPI_MAX_HZ          CONFIG_SF_DEFAULT_SPEED
+  #define CONFIG_ENV_OFFSET              (6 * 64 * 1024)
+  #define CONFIG_ENV_SIZE                (8 * 1024)
+  #define CONFIG_SYS_MMC_ENV_DEV         0
+#elif defined(CONFIG_ENV_IS_IN_NAND)
+  #define CONFIG_ENV_OFFSET              (16 << 20)
+  #define CONFIG_ENV_SECT_SIZE           (128 << 10)
+  #define CONFIG_ENV_SIZE                CONFIG_ENV_SECT_SIZE
+  #define CONFIG_ENV_OFFSET_REDUND       (CONFIG_ENV_OFFSET + (512 << 10))
+  #define CONFIG_ENV_SIZE_REDUND         CONFIG_ENV_SIZE
 #endif
 
 /* Environment */
@@ -233,86 +255,81 @@
 	"uimage=boot/uImage\0" \
 	"console=ttymxc1\0" \
 	"fdt_high=0xffffffff\0" \
-	"ip_dyn=yes\0" \
-	"fdt_file=ventana.dtb\0" \
 	"fdt_addr=0x11000000\0" \
-	"fs=ext2\0" \
+	"hwconfig=rs232;" \
+		"dio0:mode=gpio;dio1:mode=gpio;dio2:mode=gpio;dio3:mode=gpio\0" \
 	"video=\0" \
-	"extra=debug\0" \
+	"image_rootfs=openwrt-imx61-root.ubi\0" \
 	\
-	"spidev=\0" \
-	"spi_koffset=0x90000\0" \
-	"spi_klen=0x200000\0" \
-	"spiroot=/dev/mtdblock3 rootfstype=squashfs,jffs2\0" \
-	"spiargs=setenv bootargs console=${console},${baudrate} " \
-		"root=${spiroot} ${video} ${extra}\0" \
-	"spiboot=echo Booting from spi flash ...; " \
-		"sf probe; " \
-		"sf read ${loadaddr} ${spi_koffset} ${spi_klen}; " \
-		"run spiargs; " \
-		"bootm\0" \
+	"mtdparts=" MTDPARTS_DEFAULT "\0" \
+	"mtdids=" MTDIDS_DEFAULT "\0" \
 	\
-	"mmcdev=0\0" \
-	"mmcpart=1\0" \
-	"mmcroot=/dev/mmcblk0p1 rootwait rw\0" \
-	"mmcargs=setenv bootargs console=${console},${baudrate} " \
-		"root=${mmcroot} ${video} ${extra}\0" \
-	"loadbootscript=" \
-		"${fs}load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${script};\0" \
-	"bootscript=echo Running bootscript from mmc ...; " \
-		"source\0" \
-	"loaduimage=${fs}load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${uimage}\0" \
-	"loadfdt=${fs}load mmc ${mmcdev}:${mmcpart} ${fdt_addr} ${fdt_file}\0" \
-	"mmcboot=echo Booting from mmc ...; " \
-		"run mmcargs; " \
-		"if test ${boot_fdt} = yes || test {boot_fdt} = try; then " \
-			"if run loadfdt; then " \
-				"bootm ${loadaddr} - ${fdt_addr}; " \
+	"nand_loadfdt=" \
+		"if ubifsload ${fdt_addr} boot/${fdt_file}; then " \
+			"echo Loaded DTB from boot/${fdt_file}; " \
+		"else " \
+			"if ubifsload ${fdt_addr} boot/${fdt_file1}; then " \
+				"echo Loaded DTB from boot/${fdt_file1}; " \
 			"else " \
-				"if test ${boot_fdt} = try; then " \
-					"bootm; " \
-				"else " \
-					"echo WARN: Cannot load the DT; " \
+				"if ubifsload ${fdt_addr} boot/${fdt_file2}; then " \
+					"echo Loaded DTB from boot/${fdt_file2}; " \
 				"fi; " \
 			"fi; " \
-		"else " \
-			"bootm; " \
-		"fi;\0" \
+		"fi\0" \
 	\
-	"clearenv=sf probe && " \
-		"sf erase 80000 10000 && " \
-		"echo resotred environment to factory defaults\0" \
+	"nand_boot=" \
+		"ubi part rootfs && ubifsmount ubi0:rootfs; " \
+		"run nand_loadfdt && fdt addr ${fdt_addr} && fdt boardsetup; " \
+		"if ubifsload ${loadaddr} ${uimage}; then " \
+			"echo Booting from NAND flashs...; " \
+			"ubifsumount; " \
+			"setenv bootargs console=${console},${baudrate} " \
+				"root=ubi0:rootfs ubi.mtd=2 rootfstype=ubifs ${video} ${extra}; " \
+			"bootm ${loadaddr} - ${fdt_addr}; " \
+		"fi\0" \
+	"nand_update=echo Updating NAND from ${serverip}:${image_rootfs} ...; " \
+		"tftp ${loadaddr} ${image_rootfs} && " \
+		"nand erase.part rootfs && " \
+		"nand write ${loadaddr} rootfs ${filesize}\0" \
 	\
-	"image_uboot=ventana/u-boot.imx\0" \
-	"image_os=ventana/openwrt-imx61-imx6q-gw5400-squashfs.bin\0" \
-	"updateuboot=echo Updating uboot from ${serverip}:${image_uboot} ...; " \
-		"tftpboot ${loadaddr} ${image_uboot} && " \
-		"sf probe && sf erase 0 80000 && sf write ${loadaddr} 400 ${filesize}\0"	\
-	"update=echo Updating OS from ${serverip}:${image_os} ...; " \
-		"tftp ${loadaddr} ${image_os} && " \
-		"sf probe && sf update ${loadaddr} ${spi_koffset} ${filesize}\0"
-
-#define CONFIG_BOOTCOMMAND \
-	"mmc dev ${mmcdev};" \
-	"mmc dev ${mmcdev}; if mmc rescan; then " \
-		"if run loadbootscript; then " \
-			"run bootscript; " \
+	"mmc_root=/dev/mmcblk0p1 rootfstype=ext4 rootwait rw\0" \
+	"mmc_loaduimage=ext2load mmc 0:1 ${loadaddr} ${uimage}\0" \
+	"mmc_loadfdt=" \
+		"if ext2load mmc 0:1 ${fdt_addr} boot/${fdt_file}; then " \
+			"echo Loaded DTB from boot/${fdt_file}; " \
 		"else " \
-			"if run loaduimage; then " \
-				"run mmcboot; " \
-			"else run spiboot; " \
+			"if ext2load mmc 0:1 ${fdt_addr} boot/${fdt_file1}; then " \
+				"echo Loaded DTB from boot/${fdt_file1}; " \
+			"else " \
+				"if ext2load mmc 0:1 ${fdt_addr} boot/${fdt_file2}; then " \
+					"echo Loaded DTB from boot/${fdt_file2}; " \
+				"fi; " \
 			"fi; " \
-		"fi; " \
-	"else run spiboot; fi"
+		"fi\0" \
+	"mmc_boot=mmc dev 0 && mmc rescan && " \
+		"if ext2load mmc 0:1 ${loadaddr} ${script}; then " \
+			"source; " \
+		"else " \
+			"ext2load mmc 0:1 ${loadaddr} ${uimage} && " \
+			"echo 'Booting from mmc...'; "\
+			"setenv bootargs console=${console},${baudrate} " \
+				"root=/dev/mmcblk0p1 rootfstype=ext4 rootwait rw ${video} ${extra}; " \
+			"if run mmc_loadfdt && fdt addr ${fdt_addr} && fdt boardsetup; then " \
+				"bootm ${loadaddr} - ${fdt_addr}; " \
+			"else " \
+				"bootm; " \
+			"fi; " \
+		"fi\0"
 
-/* Flattened Image Tree Suport */
-#define CONFIG_FIT
-#define CONFIG_FIT_VERBOSE
+#define CONFIG_BOOTCOMMAND "if run mmc_boot; then; else run nand_boot; fi"
+
+/* Device Tree Support */
 #define CONFIG_OF_BOARD_SETUP
 #define CONFIG_OF_LIBFDT
+#define CONFIG_FDT_FIXUP_PARTITIONS
 
 #ifndef CONFIG_SYS_DCACHE_OFF
-#define CONFIG_CMD_CACHE
+  #define CONFIG_CMD_CACHE
 #endif
 
 #endif			       /* __CONFIG_H */

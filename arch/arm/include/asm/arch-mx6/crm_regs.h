@@ -20,6 +20,17 @@
 #ifndef __ARCH_ARM_MACH_MX6_CCM_REGS_H__
 #define __ARCH_ARM_MACH_MX6_CCM_REGS_H__
 
+#define CCM_CCGR0              0x020C4068
+#define CCM_CCGR1              0x020C406c
+#define CCM_CCGR2              0x020C4070
+#define CCM_CCGR3              0x020C4074
+#define CCM_CCGR4              0x020C4078
+#define CCM_CCGR5              0x020C407c
+#define CCM_CCGR6              0x020C4080
+
+#define PMU_MISC2              0x020C8170
+
+#ifndef __ASSEMBLY__
 struct mxc_ccm_reg {
 	u32 ccr;	/* 0x0000 */
 	u32 ccdr;
@@ -105,6 +116,7 @@ struct mxc_ccm_reg {
 	u32 analog_pfd_528_clr;
 	u32 analog_pfd_528_tog;
 };
+#endif
 
 /* Define the bits in register CCR */
 #define MXC_CCM_CCR_RBC_EN				(1 << 27)
@@ -250,10 +262,13 @@ struct mxc_ccm_reg {
 /* Define the bits in register CS2CDR */
 #define MXC_CCM_CS2CDR_ENFC_CLK_PODF_MASK		(0x3F << 21)
 #define MXC_CCM_CS2CDR_ENFC_CLK_PODF_OFFSET		21
+#define MXC_CCM_CS2CDR_ENFC_CLK_PODF(v)			(((v) & 0x3f) << 21)
 #define MXC_CCM_CS2CDR_ENFC_CLK_PRED_MASK		(0x7 << 18)
 #define MXC_CCM_CS2CDR_ENFC_CLK_PRED_OFFSET		18
+#define MXC_CCM_CS2CDR_ENFC_CLK_PRED(v)			(((v) & 0x7) << 18)
 #define MXC_CCM_CS2CDR_ENFC_CLK_SEL_MASK		(0x3 << 16)
 #define MXC_CCM_CS2CDR_ENFC_CLK_SEL_OFFSET		16
+#define MXC_CCM_CS2CDR_ENFC_CLK_SEL(v)			(((v) & 0x3) << 16)
 #define MXC_CCM_CS2CDR_LDB_DI1_CLK_SEL_MASK		(0x7 << 12)
 #define MXC_CCM_CS2CDR_LDB_DI1_CLK_SEL_OFFSET		12
 #define MXC_CCM_CS2CDR_LDB_DI0_CLK_SEL_MASK		(0x7 << 9)
@@ -403,8 +418,8 @@ struct mxc_ccm_reg {
 #define MXC_CCM_CCGR0_AIPS_TZ1_MASK			(3<<MXC_CCM_CCGR0_AIPS_TZ1_OFFSET)
 #define MXC_CCM_CCGR0_AIPS_TZ2_OFFSET			2
 #define MXC_CCM_CCGR0_AIPS_TZ2_MASK			(3<<MXC_CCM_CCGR0_AIPS_TZ2_OFFSET)
-#define MXC_CCM_CCGR0_APBHDMA HCLK_OFFSET		4
-#define MXC_CCM_CCGR0_AMASK				(3<<MXC_CCM_CCGR0_APBHDMA)
+#define MXC_CCM_CCGR0_APBHDMA_OFFSET			4
+#define MXC_CCM_CCGR0_APBHDMA_MASK			(3<<MXC_CCM_CCGR0_APBHDMA_OFFSET)
 #define MXC_CCM_CCGR0_ASRC_OFFSET			6
 #define MXC_CCM_CCGR0_ASRC_MASK				(3<<MXC_CCM_CCGR0_ASRC_OFFSET)
 #define MXC_CCM_CCGR0_CAAM_SECURE_MEM_OFFSET		8

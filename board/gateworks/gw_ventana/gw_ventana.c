@@ -32,17 +32,24 @@
 #include <asm/imx-common/mxc_i2c.h>
 #include <asm/imx-common/boot_mode.h>
 #include <asm/imx-common/imx_pwm.h>
+#include <asm/arch/crm_regs.h>
+#include <asm/arch/mxc_hdmi.h>
+#include <asm/arch/sys_proto.h>
+#include <linux/list.h>
+#include <linux/ctype.h>
+#include <linux/fb.h>
 #include <mmc.h>
 #include <fsl_esdhc.h>
 #include <micrel.h>
 #include <miiphy.h>
 #include <netdev.h>
-#include <linux/fb.h>
 #include <ipu_pixfmt.h>
-#include <asm/arch/crm_regs.h>
-#include <asm/arch/mxc_hdmi.h>
 #include <i2c.h>
 #include <fdt_support.h>
+#include <jffs2/load_kernel.h>
+#include <mtd_node.h>
+#include <spi_flash.h>
+#include <hwconfig.h>
 
 #include "ventana_eeprom.h"
 
@@ -73,7 +80,6 @@ DECLARE_GLOBAL_DATA_PTR;
 iomux_v3_cfg_t const uart1_pads[] = {
 	MX6Q_PAD_SD3_DAT6__UART1_RXD | MUX_PAD_CTRL(UART_PAD_CTRL),
 	MX6Q_PAD_SD3_DAT7__UART1_TXD | MUX_PAD_CTRL(UART_PAD_CTRL),
-	MX6Q_PAD_EIM_D24__UART1_DTR | MUX_PAD_CTRL(UART_PAD_CTRL),
 };
 
 /* UART2, Console */
@@ -82,11 +88,13 @@ iomux_v3_cfg_t const uart2_pads[] = {
        MX6Q_PAD_SD4_DAT4__UART2_RXD | MUX_PAD_CTRL(UART_PAD_CTRL),
 };
 
+#if 0 // depends on GW5400A vs GW5400B
 /* UART3, GPS */
 iomux_v3_cfg_t const uart3_pads[] = {
        MX6Q_PAD_SD4_CMD__UART3_TXD | MUX_PAD_CTRL(UART_PAD_CTRL),
        MX6Q_PAD_SD4_CLK__UART3_RXD | MUX_PAD_CTRL(UART_PAD_CTRL),
 };
+#endif
 
 #define PC MUX_PAD_CTRL(I2C_PAD_CTRL)
 
@@ -163,49 +171,55 @@ iomux_v3_cfg_t const enet_pads[] = {
 	MX6Q_PAD_ENET_TXD0__GPIO_1_30 | MUX_PAD_CTRL(NO_PAD_CTRL), /* PHY nRST */
 };
 
-
-/* GPIO assignments */
-static iomux_v3_cfg_t const gpio_pads[] = {
-	// MX6_DIO0
-	//MX6Q_PAD_GPIO_9__GPIO_1_9 | MUX_PAD_CTRL(NO_PAD_CTRL),
-	MX6Q_PAD_GPIO_9__PWM1_PWMO | MUX_PAD_CTRL(NO_PAD_CTRL),
-
-	// MX6_DIO1
-	//MX6Q_PAD_SD1_DAT2__GPIO_1_19 | MUX_PAD_CTRL(NO_PAD_CTRL),
-	MX6Q_PAD_SD1_DAT2__PWM2_PWMO | MUX_PAD_CTRL(NO_PAD_CTRL),
-
-	// MX6_DIO2
-	MX6Q_PAD_SD4_DAT1__GPIO_2_9 | MUX_PAD_CTRL(NO_PAD_CTRL),
-	//MX6Q_PAD_SD4_DAT1__PWM3_PWMO | MUX_PAD_CTRL(NO_PAD_CTRL),
-
-	// MX6_DIO3
-	MX6Q_PAD_SD4_DAT2__GPIO_2_10 | MUX_PAD_CTRL(NO_PAD_CTRL),
-	//MX6Q_PAD_SD4_DAT2__PWM4_PWMO | MUX_PAD_CTRL(NO_PAD_CTRL),
-
-	// MIPI_DIO
-	MX6Q_PAD_SD1_DAT3__GPIO_1_21 | MUX_PAD_CTRL(NO_PAD_CTRL),
-	// UART2_EN#
-	MX6Q_PAD_SD4_DAT3__GPIO_2_11 | MUX_PAD_CTRL(NO_PAD_CTRL),
-	// DIOI2C_DIS#
-	MX6Q_PAD_GPIO_19__GPIO_4_5 | MUX_PAD_CTRL(NO_PAD_CTRL),
-
-	// PCI6EXP_IO0 - PWREN#
-	MX6Q_PAD_KEY_ROW0__GPIO_4_7 | MUX_PAD_CTRL(NO_PAD_CTRL),
-	// PCI6EXP_IO1 - IRQ# 
-	MX6Q_PAD_KEY_ROW1__GPIO_4_9 | MUX_PAD_CTRL(NO_PAD_CTRL),
-
-	// PCIECK_SSON
-	MX6Q_PAD_SD1_CLK__GPIO_1_20 | MUX_PAD_CTRL(NO_PAD_CTRL),
-	// PCIESWT_RST#
-	MX6Q_PAD_ENET_TXD1__GPIO_1_29 | MUX_PAD_CTRL(NO_PAD_CTRL),
-
-	// MX6_PANLEDG#
-	MX6Q_PAD_KEY_COL0__GPIO_4_6 | MUX_PAD_CTRL(NO_PAD_CTRL),
-	// MX6_PANLEDR#
-	MX6Q_PAD_KEY_COL2__GPIO_4_10 | MUX_PAD_CTRL(NO_PAD_CTRL),
-	// MX6_LOCLED#
-	MX6Q_PAD_KEY_ROW4__GPIO_4_15 | MUX_PAD_CTRL(NO_PAD_CTRL),
+/* NAND */
+iomux_v3_cfg_t const nfc_pads[] = {
+	MX6Q_PAD_NANDF_CLE__RAWNAND_CLE     | MUX_PAD_CTRL(NO_PAD_CTRL),
+	MX6Q_PAD_NANDF_ALE__RAWNAND_ALE     | MUX_PAD_CTRL(NO_PAD_CTRL),
+	MX6Q_PAD_NANDF_WP_B__RAWNAND_RESETN | MUX_PAD_CTRL(NO_PAD_CTRL),
+	MX6Q_PAD_NANDF_RB0__RAWNAND_READY0  | MUX_PAD_CTRL(NO_PAD_CTRL),
+	MX6Q_PAD_NANDF_CS0__RAWNAND_CE0N    | MUX_PAD_CTRL(NO_PAD_CTRL),
+	MX6Q_PAD_SD4_CMD__RAWNAND_RDN       | MUX_PAD_CTRL(NO_PAD_CTRL),
+	MX6Q_PAD_SD4_CLK__RAWNAND_WRN       | MUX_PAD_CTRL(NO_PAD_CTRL),
+	MX6Q_PAD_NANDF_D0__RAWNAND_D0       | MUX_PAD_CTRL(NO_PAD_CTRL),
+	MX6Q_PAD_NANDF_D1__RAWNAND_D1       | MUX_PAD_CTRL(NO_PAD_CTRL),
+	MX6Q_PAD_NANDF_D2__RAWNAND_D2       | MUX_PAD_CTRL(NO_PAD_CTRL),
+	MX6Q_PAD_NANDF_D3__RAWNAND_D3       | MUX_PAD_CTRL(NO_PAD_CTRL),
+	MX6Q_PAD_NANDF_D4__RAWNAND_D4       | MUX_PAD_CTRL(NO_PAD_CTRL),
+	MX6Q_PAD_NANDF_D5__RAWNAND_D5       | MUX_PAD_CTRL(NO_PAD_CTRL),
+	MX6Q_PAD_NANDF_D6__RAWNAND_D6       | MUX_PAD_CTRL(NO_PAD_CTRL),
+	MX6Q_PAD_NANDF_D7__RAWNAND_D7       | MUX_PAD_CTRL(NO_PAD_CTRL),
 };
+
+#ifdef CONFIG_CMD_NAND
+static void setup_gpmi_nand(void)
+{
+	struct mxc_ccm_reg *mxc_ccm = (struct mxc_ccm_reg *)CCM_BASE_ADDR;
+
+	/* config gpmi nand iomux */
+	imx_iomux_v3_setup_multiple_pads(nfc_pads,
+		ARRAY_SIZE(nfc_pads));
+
+	/* config gpmi and bch clock to 100 MHz */
+	clrsetbits_le32(&mxc_ccm->cs2cdr,
+		MXC_CCM_CS2CDR_ENFC_CLK_PODF_MASK |
+		MXC_CCM_CS2CDR_ENFC_CLK_PRED_MASK |
+		MXC_CCM_CS2CDR_ENFC_CLK_SEL_MASK,
+		MXC_CCM_CS2CDR_ENFC_CLK_PODF(0) |
+		MXC_CCM_CS2CDR_ENFC_CLK_PRED(3) |
+		MXC_CCM_CS2CDR_ENFC_CLK_SEL(3));
+
+	/* enable gpmi and bch clock gating */
+	setbits_le32(&mxc_ccm->CCGR4,
+		MXC_CCM_CCGR4_RAWNAND_U_BCH_INPUT_APB_MASK |
+		MXC_CCM_CCGR4_RAWNAND_U_GPMI_BCH_INPUT_BCH_MASK |
+		MXC_CCM_CCGR4_RAWNAND_U_GPMI_BCH_INPUT_GPMI_IO_MASK |
+		MXC_CCM_CCGR4_RAWNAND_U_GPMI_INPUT_APB_MASK |
+		MXC_CCM_CCGR4_PL301_MX6QPER1_BCH_OFFSET);
+
+	/* enable apbh clock gating */
+	setbits_le32(&mxc_ccm->CCGR0, MXC_CCM_CCGR0_APBHDMA_MASK);
+}
+#endif
 
 static void setup_iomux_enet(void)
 {
@@ -220,13 +234,18 @@ static void setup_iomux_enet(void)
 iomux_v3_cfg_t const usb_pads[] = {
 	/* HUB reset */
 	MX6Q_PAD_SD1_DAT0__GPIO_1_16 | MUX_PAD_CTRL(NO_PAD_CTRL),
+
+	/* USBOTG_PWR enable */
+	MX6Q_PAD_EIM_D22__USBOH3_USBOTG_PWR,
 };
 
 static void setup_iomux_uart(void)
 {
 	imx_iomux_v3_setup_multiple_pads(uart1_pads, ARRAY_SIZE(uart1_pads));
 	imx_iomux_v3_setup_multiple_pads(uart2_pads, ARRAY_SIZE(uart2_pads));
+#if 0 // depends on GW5400A vs GW5400B
 	imx_iomux_v3_setup_multiple_pads(uart3_pads, ARRAY_SIZE(uart3_pads));
+#endif
 }
 
 #ifdef CONFIG_USB_EHCI_MX6
@@ -289,59 +308,162 @@ int board_mmc_init(bd_t *bis)
 }
 #endif
 
-/* read ventana EEPROM and return structure or NULL on error
+/* Gateworks System Controller I2C access may NAK when busy - use
+ * retries.
  */
-static struct ventana_board_info *read_eeprom(int display)
+int gsc_i2c_read(uchar chip, uint addr, int alen, uchar *buf, int len)
 {
-#if 1
+	int retry = 3;
+	int n = 0;
+	int ret;
+
+	while (n++ < retry) {
+		ret = i2c_read(chip, addr, alen, buf, len);
+		if (!ret)
+			break;
+		printf("%s: 0x%02x 0x%02x retry%d: %d\n", __func__, chip, addr, n, ret);
+		if (ret != -ENODEV)
+			break;
+		mdelay(10);
+	}
+	return ret;
+}
+
+int gsc_i2c_write(uchar chip, uint addr, int alen, uchar *buf, int len)
+{
+	int retry = 3;
+	int n = 0;
+	int ret;
+
+	while (n++ < retry) {
+		ret = i2c_write(chip, addr, alen, buf, len);
+		if (!ret)
+			break;
+		printf("%s: 0x%02x 0x%02x retry%d: %d\n", __func__, chip, addr, n, ret);
+		if (ret != -ENODEV)
+			break;
+		mdelay(10);
+	}
+	mdelay(1);
+	return ret;
+}
+
+/*
+ * For SPL boot some boards need i2c before SDRAM is initialized so force
+ * variables to live in SRAM
+ */
+static struct ventana_board_info __attribute__((section(".data"))) ventana_info;
+
+/* read ventana EEPROM and return structure or NULL on error
+ * should be called once, the first time eeprom data is needed
+ */
+static void
+read_eeprom(void)
+{
 	int i;
 	int chksum;
-	static struct ventana_board_info board_info;
-	unsigned char *buf = (unsigned char *) &board_info;
-	struct ventana_board_info *info = &board_info;
+	struct ventana_board_info *info = &ventana_info;
+	unsigned char *buf = (unsigned char *) &ventana_info;
+	int n = 0;
 
-//printf("%s\n", __func__);
-	memset(info, 0, sizeof(board_info));
+	memset(info, 0, sizeof(ventana_info));
 
-	// ensure bus and device exist
-	//mdelay(1000); // I believe this is needed to wait for GSC to powerup w/o battery - need to investigate
-	if (i2c_set_bus_num(0) || i2c_probe(0x51)) {
-		if (display)
-			printf("**** Failed to detect GSC EEPROM\n");
-		return NULL;
+	// wait for bus and device exist - we will not boot w/o our EEPROM
+	while(1) {
+		if (0 == i2c_set_bus_num(0) && 0 == i2c_probe(0x51))
+			break;
+		mdelay(1);
+		n++;
+/*
+		if (n > 2000) {
+			printf("EEPROM: Failed to probe EEPROM\n");
+			info->model[0] = 0;
+			return;
+		}
+*/
 	}
 
 	// read eeprom config section
-	if (i2c_read(0x51, 0x00, 1, buf, sizeof(board_info))) {
-		if (display)
-			printf("**** Failed to read GSC EEPROM\n");
-		return NULL;
+	if (gsc_i2c_read(0x51, 0x00, 1, buf, sizeof(ventana_info))) {
+		printf("EEPROM: Failed to read EEPROM\n");
+		info->model[0] = 0;
+		return;
 	}
 
 	// sanity checks
 	if (info->model[0] != 'G' || info->model[1] != 'W') {
-		if (display)
-			printf("**** Invalid Model\n");
-		return NULL;
+		printf("EEPROM: Invalid Model in EEPROM\n");
+		info->model[0] = 0;
+		return;
 	}
 
 	// validate checksum
-//printf("calculating checksum\n");
 	for (chksum = 0, i = 0; i < sizeof(*info)-2; i++)
 		chksum += buf[i];
-//printf("chksum:0x%04x:0x%02x%02x\n", chksum, info->chksum[1], info->chksum[0]);
 	if ((info->chksum[0] != chksum>>8) || (info->chksum[1] != (chksum&0xff))) {
-		if (display)
-			printf("**** Failed EEPROM checksum\n");
-		return NULL;
+		printf("EEPROM: Failed EEPROM checksum\n");
+		info->model[0] = 0;
+		return;
 	}
-
-//printf("board info valid\n");
-	return info;
-#else
-	return NULL;
-#endif
 }
+
+#ifdef CONFIG_CMD_GSC
+int read_hwmon(const char *name, uint reg, uint size, uint low, uint high)
+{
+	unsigned char buf[3];
+	uint ui;
+	int ret;
+
+	printf("%-8s:", name);
+	memset(buf, 0, sizeof(buf));
+	if (gsc_i2c_read(0x29, reg, 1, buf, size)) {
+		printf("fRD\n");
+		ret = -1;
+	} else {
+		ret = 0;
+		ui = buf[0] | (buf[1]<<8) | (buf[2]<<16);
+		if (ui == 0xffffff)
+			printf("fVL");
+		else if (ui < low) {
+			printf("%d fLO", ui);
+			ret = -2;
+		}
+		else if (ui > high) {
+			printf("%d fHI", ui);
+			ret = -3;
+		}
+		else
+			printf("%d", ui);
+	}
+	printf("\n");
+
+	return ret;
+}
+
+int do_gsc(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
+{
+	i2c_set_bus_num(0);
+	read_hwmon("Temp",     0x00, 2, 0, 9000);
+	read_hwmon("VIN",      0x02, 3, 8000, 60000);
+	read_hwmon("VDD_3P3",  0x05, 3, 3300*0.9, 3300*1.1);
+	read_hwmon("VBATT",    0x08, 3, 2000*0.9, 3000*1.1);
+	read_hwmon("VDD_CORE", 0x0e, 3, 1375*0.9, 1375*1.1);
+	read_hwmon("VDD_SOC",  0x11, 3, 1375*0.9, 1375*1.1);
+	read_hwmon("VDD_HIGH", 0x14, 3, 3000*0.9, 3000*1.1);
+	read_hwmon("VDD_DDR",  0x17, 3, 1500*0.9, 1500*1.1);
+	read_hwmon("VDD_5P0",  0x0b, 3, 5000*0.9, 5000*1.1);
+	read_hwmon("VDD_2P5",  0x23, 3, 2500*0.9, 2500*1.1);
+	read_hwmon("VDD_1P8",  0x1d, 3, 1800*0.9, 1800*1.1);
+	read_hwmon("VDD_1P0",  0x20, 3, 1000*0.9, 1000*1.1);
+
+	return 0;
+}
+
+U_BOOT_CMD(gsc, 1, 1, do_gsc,
+  "GSC test",
+  ""
+);
+#endif // CONFIG_CMD_GSC
 
 
 /* get_mac from env string, with default
@@ -354,7 +476,6 @@ static void get_mac(char *envvar, unsigned char *def)
 	if (!env) {
 		sprintf(str, "%02X:%02X:%02X:%02X:%02X:%02X",
 			def[0], def[1], def[2], def[3], def[4], def[5]);
-		printf("### Setting environment from ROM MAC address = \"%s\"\n", str);
 		setenv(envvar, str);
 	}
 }
@@ -381,16 +502,14 @@ u32 get_board_rev(void)
  */
 void get_board_serial(struct tag_serialnr *serialnr)
 {
-	struct ventana_board_info *info = read_eeprom(0);
   char *serial = getenv("serial#");
 
-//printf("%s\n", __func__);
   if (serial) {
     serialnr->high = 0;
     serialnr->low = simple_strtoul(serial, NULL, 10);
-  } else if (info) {
+  } else if (ventana_info.model[0]) {
     serialnr->high = 0;
-		serialnr->low = info->serial;
+		serialnr->low = ventana_info.serial;
 	} else {
     serialnr->high = 0;
     serialnr->low = 0;
@@ -417,8 +536,7 @@ static void setup_spi(void)
 
 int board_phy_config(struct phy_device *phydev)
 {
-//	unsigned short val;
-//printf("\n%s: port%d link=%d addr=%d phy_id=0x%08x\n", __func__, phydev->port, phydev->link, phydev->addr, phydev->phy_id);
+	unsigned short val;
 
 	/* Marvel 88E1510 */
 	if (phydev->phy_id == 0x1410dd1) {
@@ -434,6 +552,17 @@ int board_phy_config(struct phy_device *phydev)
 		phy_write(phydev, MDIO_DEVAD_NONE, 16, 0x2159);
 		phy_write(phydev, MDIO_DEVAD_NONE, 22, 0x00fb);
 		phy_write(phydev, MDIO_DEVAD_NONE,  7, 0xc00d);
+		phy_write(phydev, MDIO_DEVAD_NONE, 22, 0);
+
+		/* LED configuration (See datasheet section 2.26.4)
+		 * LED[0] (SPD:Amber) R16_3.3:0 to 0111: on-GbE link
+		 * LED[1] (LNK:Green) R16_3.7:4 to 0001: on-link, blink-activity
+		 */
+		phy_write(phydev, MDIO_DEVAD_NONE, 22, 3);
+		val = phy_read(phydev, MDIO_DEVAD_NONE, 16);
+		val &= 0xff00;
+		val |= 0x0017;
+		phy_write(phydev, MDIO_DEVAD_NONE, 16, val);
 		phy_write(phydev, MDIO_DEVAD_NONE, 22, 0);
 
 #if 0 // untested
@@ -482,37 +611,136 @@ int board_eth_init(bd_t *bis)
 	return 0;
 }
 
-static void setup_gpio(void)
+static void setup_board_gpio(const char* model)
 {
-	imx_iomux_v3_setup_multiple_pads(gpio_pads,
-					 ARRAY_SIZE(gpio_pads));
+	if (strncasecmp(model, "GW54", 4) == 0) {
+		if (strncasecmp(model, "GW5400-A", 8) == 0) {
+			// PANLEDG#
+			imx_iomux_v3_setup_pad(MX6Q_PAD_KEY_COL0__GPIO_4_6);
+			gpio_direction_output(IMX_GPIO_NR(4, 6), 1);  // grn off
 
-	/* configure outputs */
-	gpio_direction_output(IMX_GPIO_NR(2, 11), 0); // UART2_EN#
-	gpio_direction_output(IMX_GPIO_NR(4,  5), 0); // DIOI2C_DIS#
+			// PANLEDR#
+			imx_iomux_v3_setup_pad(MX6Q_PAD_KEY_COL2__GPIO_4_10);
+			gpio_direction_output(IMX_GPIO_NR(4, 10), 1); // red off
 
-	/* default LED's off */
-	gpio_direction_output(IMX_GPIO_NR(4, 10), 1); // red
-	gpio_direction_output(IMX_GPIO_NR(4, 15), 1); // loc
-	gpio_direction_output(IMX_GPIO_NR(4, 6), 1);  // grn
+			// MX6_LOCLED#
+			imx_iomux_v3_setup_pad(MX6Q_PAD_KEY_ROW4__GPIO_4_15);
+			gpio_direction_output(IMX_GPIO_NR(4, 15), 1); // loc off
 
-	/* default DIO's */
-	gpio_direction_input(IMX_GPIO_NR(1, 9));
-	gpio_direction_input(IMX_GPIO_NR(1, 19));
-	gpio_direction_input(IMX_GPIO_NR(2, 9));
-	gpio_direction_input(IMX_GPIO_NR(2, 10));
+			// MIPI DIO
+			imx_iomux_v3_setup_pad(MX6Q_PAD_SD1_DAT3__GPIO_1_21);
 
-	/* default Expansion board DIO's */
-	gpio_direction_output(IMX_GPIO_NR(4, 7), 0); // PWREN#
-	gpio_direction_input(IMX_GPIO_NR(4, 9));     // IRQ#
+			// UART1 Transmit Enable
+			imx_iomux_v3_setup_pad(MX6Q_PAD_EIM_D24__GPIO_3_24);
+
+			// Expansion IO0 - PWREN#
+			imx_iomux_v3_setup_pad(MX6Q_PAD_KEY_ROW0__GPIO_4_7);
+			gpio_direction_output(IMX_GPIO_NR(4, 7), 0);
+
+			// Expansion IO1 - IRQ#
+			imx_iomux_v3_setup_pad(MX6Q_PAD_KEY_ROW1__GPIO_4_9);
+			gpio_direction_input(IMX_GPIO_NR(4, 9));
+		}
+
+		else if ( (strncasecmp(model, "GW5400", 6) == 0)
+		       || (strncasecmp(model, "GW5410", 6) == 0)
+		) {
+			// PANLEDG#
+			imx_iomux_v3_setup_pad(MX6Q_PAD_KEY_COL0__GPIO_4_6);
+			gpio_direction_output(IMX_GPIO_NR(4, 6), 1);  // grn off
+
+			// PANLEDR#
+			imx_iomux_v3_setup_pad(MX6Q_PAD_KEY_ROW0__GPIO_4_7);
+			gpio_direction_output(IMX_GPIO_NR(4, 7), 1);  // grn off
+
+			// MX6_LOCLED#
+			imx_iomux_v3_setup_pad(MX6Q_PAD_KEY_ROW4__GPIO_4_15);
+			gpio_direction_output(IMX_GPIO_NR(4, 15), 1);  // grn off
+
+			// UART1 Transmit Enable
+			imx_iomux_v3_setup_pad(MX6Q_PAD_SD3_DAT4__GPIO_7_1);
+
+			// Expansion IO0 - PWREN#
+			imx_iomux_v3_setup_pad(MX6Q_PAD_EIM_A19__GPIO_2_19);
+			gpio_direction_output(IMX_GPIO_NR(2, 19), 0);
+
+			// Expansion IO1 - IRQ#
+			imx_iomux_v3_setup_pad(MX6Q_PAD_EIM_A20__GPIO_2_18);
+			gpio_direction_input(IMX_GPIO_NR(2, 18));
+
+			// MSATA Enable
+			imx_iomux_v3_setup_pad(MX6Q_PAD_SD4_DAT0__GPIO_2_8);
+			gpio_direction_output(IMX_GPIO_NR(2, 8), (hwconfig("msata"))?1:0);
+			printf("MSATA: %s\n", (hwconfig("msata")?"enabled":"disabled"));
+		}
+
+		// UART2_EN#
+		imx_iomux_v3_setup_pad(MX6Q_PAD_SD4_DAT3__GPIO_2_11);
+		printf("RS232: %s\n", (hwconfig("rs232"))?"enabled":"disabled");
+		gpio_direction_output(IMX_GPIO_NR(2, 11), (hwconfig("rs232"))?1:0);
+
+		// DIOI2C_DIS#
+		imx_iomux_v3_setup_pad(MX6Q_PAD_GPIO_19__GPIO_4_5);
+		gpio_direction_output(IMX_GPIO_NR(4,  5), 0);
+
+		/* configure board general purpose IO's based on hwconfig
+		 */
+		// MX6_DIO0
+		if (hwconfig("dio0")) {
+			if (hwconfig_subarg_cmp("dio0", "mode", "gpio")) {
+				printf("DIO0:  gpio\n");
+				imx_iomux_v3_setup_pad(MX6Q_PAD_GPIO_9__GPIO_1_9);
+				gpio_direction_input(IMX_GPIO_NR(1, 9));
+			} else if (hwconfig_subarg_cmp("dio0", "mode", "pwm")) {
+				printf("DIO0:  pwm\n");
+				imx_iomux_v3_setup_pad(MX6Q_PAD_GPIO_9__PWM1_PWMO);
+			}
+		}
+		// MX6_DIO1
+		if (hwconfig("dio1")) {
+			if (hwconfig_subarg_cmp("dio1", "mode", "gpio")) {
+				printf("DIO1:  gpio\n");
+				imx_iomux_v3_setup_pad(MX6Q_PAD_SD1_DAT2__GPIO_1_19);
+				gpio_direction_input(IMX_GPIO_NR(1, 19));
+			} else if (hwconfig_subarg_cmp("dio1", "mode", "pwm")) {
+				printf("DIO1:  pwm\n");
+				imx_iomux_v3_setup_pad(MX6Q_PAD_SD1_DAT2__PWM2_PWMO);
+			}
+		}
+		// MX6_DIO2
+		if (hwconfig("dio2")) {
+			if (hwconfig_subarg_cmp("dio2", "mode", "gpio")) {
+				printf("DIO2:  gpio\n");
+				imx_iomux_v3_setup_pad(MX6Q_PAD_SD4_DAT1__GPIO_2_9);
+				gpio_direction_input(IMX_GPIO_NR(2, 9));
+			} else if (hwconfig_subarg_cmp("dio2", "mode", "pwm")) {
+				printf("DIO2:  pwm\n");
+				imx_iomux_v3_setup_pad(MX6Q_PAD_SD4_DAT1__PWM3_PWMO);
+			}
+		}
+		// MX6_DIO3
+		if (hwconfig("dio3")) {
+			if (hwconfig_subarg_cmp("dio3", "mode", "gpio")) {
+				printf("DIO3:  gpio\n");
+				imx_iomux_v3_setup_pad(MX6Q_PAD_SD4_DAT2__GPIO_2_10);
+				gpio_direction_input(IMX_GPIO_NR(2, 10));
+			} else if (hwconfig_subarg_cmp("dio3", "mode", "pwm")) {
+				printf("DIO3:  pwm\n");
+				imx_iomux_v3_setup_pad(MX6Q_PAD_SD4_DAT2__PWM4_PWMO);
+			}
+		}
+	}
 }
 
 static int setup_pcie(void)
 {
-	/* enable clock and toggle PCI_RST# */
-	gpio_direction_output(IMX_GPIO_NR(1, 29), 0); // PCIESWT_RST#
-	gpio_direction_output(IMX_GPIO_NR(1, 20), 1); // PCIECK_SSON
+	/* disable spread-spectrum clock: kernel hang when enabled - not clear why */
+	imx_iomux_v3_setup_pad(MX6Q_PAD_SD1_CLK__GPIO_1_20 | MUX_PAD_CTRL(NO_PAD_CTRL));
+	gpio_direction_output(IMX_GPIO_NR(1, 20), 0); // PCIECK_SSON
 
+	/* toggle PCI_RST# */
+	imx_iomux_v3_setup_pad(MX6Q_PAD_ENET_TXD1__GPIO_1_29 | MUX_PAD_CTRL(NO_PAD_CTRL));
+	gpio_direction_output(IMX_GPIO_NR(1, 29), 0); // PCIESWT_RST#
 	mdelay(1);
 	gpio_direction_output(IMX_GPIO_NR(1, 29), 1); // PCIESWT_RST#
 
@@ -564,14 +792,17 @@ static struct pwm_device pwm3 = {
 
 /* Parallel RGB Input (Analog Video In) */
 static iomux_v3_cfg_t const vidin_pads[] = {
-	MX6Q_PAD_EIM_DA2__IPU2_CSI1_D_7,
-	MX6Q_PAD_EIM_DA3__IPU2_CSI1_D_6,
-	MX6Q_PAD_EIM_DA4__IPU2_CSI1_D_5,
-	MX6Q_PAD_EIM_DA5__IPU2_CSI1_D_4,
-	MX6Q_PAD_EIM_DA6__IPU2_CSI1_D_3,
-	MX6Q_PAD_EIM_DA7__IPU2_CSI1_D_2,
-	MX6Q_PAD_EIM_DA8__IPU2_CSI1_D_1,
-	MX6Q_PAD_EIM_DA9__IPU2_CSI1_D_0,
+	MX6Q_PAD_EIM_EB2__IPU2_CSI1_D_19,
+	MX6Q_PAD_EIM_D16__IPU2_CSI1_D_18,
+	MX6Q_PAD_EIM_D18__IPU2_CSI1_D_17,
+	MX6Q_PAD_EIM_D19__IPU2_CSI1_D_16,
+	MX6Q_PAD_EIM_D20__IPU2_CSI1_D_15,
+	MX6Q_PAD_EIM_D26__IPU2_CSI1_D_14,
+	MX6Q_PAD_EIM_D27__IPU2_CSI1_D_13,
+	MX6Q_PAD_EIM_A17__IPU2_CSI1_D_12,
+	MX6Q_PAD_EIM_D29__IPU2_CSI1_VSYNC,
+	MX6Q_PAD_EIM_EB3__IPU2_CSI1_HSYNC,
+	MX6Q_PAD_EIM_A16__IPU2_CSI1_PIXCLK,
 };
 
 /* Parallel RGB Output (Analog Video Out) */
@@ -609,14 +840,12 @@ struct display_info_t {
 
 static int detect_hdmi(struct display_info_t const *dev)
 {
-//printf("%s: %d\n", __func__, __raw_readb(HDMI_ARB_BASE_ADDR+HDMI_PHY_STAT0) & HDMI_PHY_HPD);
 	return __raw_readb(HDMI_ARB_BASE_ADDR+HDMI_PHY_STAT0) & HDMI_PHY_HPD;
 }
 
 static void enable_hdmi(struct display_info_t const *dev)
 {
 	u8 reg;
-	printf("%s: setup HDMI monitor\n", __func__);
 	reg = __raw_readb(
 			HDMI_ARB_BASE_ADDR
 			+HDMI_PHY_CONF0);
@@ -640,7 +869,6 @@ static void enable_hdmi(struct display_info_t const *dev)
 
 static int detect_i2c(struct display_info_t const *dev)
 {
-//printf("%s bus=%d addr=0x%02x %d\n", __func__, dev->bus, dev->addr, ((0 == i2c_set_bus_num(dev->bus)) && (0 == i2c_probe(dev->addr))));
 	return ((0 == i2c_set_bus_num(dev->bus))
 		&&
 		(0 == i2c_probe(dev->addr)));
@@ -652,9 +880,7 @@ static void enable_lvds(struct display_info_t const *dev)
 				IOMUXC_BASE_ADDR;
 
 	/* set CH0 data width to 24bit (IOMUXC_GPR2:5 0=18bit, 1=24bit) */
-//printf("%s\n", __func__);
 	u32 reg = readl(&iomux->gpr[2]);
-//printf("%p=%x\n", &iomux->gpr[2], reg);
 	reg |= IOMUXC_GPR2_DATA_WIDTH_CH0_24BIT;
 	writel(reg, &iomux->gpr[2]);
 
@@ -701,7 +927,9 @@ static struct display_info_t const displays[] = {{
 		.sync           = FB_SYNC_EXT,
 		.vmode          = FB_VMODE_NONINTERLACED
 } }, {
-	/* HannStar HSD100PXN1-A00 with egalx_ts controller */
+	/* HannStar HSD100PXN1-A00 with egalx_ts controller
+	 * (aka Freescale MXC-LVDS1 10" 1024x768 60Hz LCD touchscreen)
+	 */
 	.bus	= 2,
 	.addr	= 0x4,
 	.pixfmt	= IPU_PIX_FMT_LVDS666,
@@ -721,48 +949,6 @@ static struct display_info_t const displays[] = {{
 		.vsync_len      = 10,
 		.sync           = FB_SYNC_EXT,
 		.vmode          = FB_VMODE_NONINTERLACED
-#if 0
-} }, {
-	.bus	= 2,
-	.addr	= 0x38,
-	.pixfmt	= IPU_PIX_FMT_LVDS666,
-	.detect	= detect_i2c,
-	.enable	= enable_lvds,
-	.mode	= {
-		.name           = "wsvga-lvds",
-		.refresh        = 60,
-		.xres           = 1024,
-		.yres           = 600,
-		.pixclock       = 15385,
-		.left_margin    = 220,
-		.right_margin   = 40,
-		.upper_margin   = 21,
-		.lower_margin   = 7,
-		.hsync_len      = 60,
-		.vsync_len      = 10,
-		.sync           = FB_SYNC_EXT,
-		.vmode          = FB_VMODE_NONINTERLACED
-} }, {
-	.bus	= 2,
-	.addr	= 0x2a,
-	.pixfmt	= IPU_PIX_FMT_RGB666,
-	.detect	= detect_i2c,
-	.enable	= enable_vidout,
-	.mode	= {
-		.name           = "wvga-rgb",
-		.refresh        = 57,
-		.xres           = 800,
-		.yres           = 480,
-		.pixclock       = 37037,
-		.left_margin    = 40,
-		.right_margin   = 60,
-		.upper_margin   = 10,
-		.lower_margin   = 10,
-		.hsync_len      = 20,
-		.vsync_len      = 10,
-		.sync           = 0,
-		.vmode          = FB_VMODE_NONINTERLACED
-#endif
 } } };
 
 int board_video_skip(void)
@@ -795,7 +981,7 @@ int board_video_skip(void)
 				    displays[i].pixfmt);
 		if (!ret) {
 			displays[i].enable(displays+i);
-			printf("Display: %s (%ux%u)\n",
+			printf("DISP:  %s (%ux%u)\n",
 			       displays[i].mode.name,
 			       displays[i].mode.xres,
 			       displays[i].mode.yres);
@@ -814,7 +1000,6 @@ static void setup_display(void)
 	struct mxc_ccm_reg *mxc_ccm = (struct mxc_ccm_reg *)CCM_BASE_ADDR;
 	struct anatop_regs *anatop = (struct anatop_regs *)ANATOP_BASE_ADDR;
 	struct iomuxc *iomux = (struct iomuxc *)IOMUXC_BASE_ADDR;
-
 	int reg;
 
 	/* Turn on LDB0,IPU,IPU DI0 clocks */
@@ -903,7 +1088,7 @@ static int setup_pmic_voltages(void)
 			printf("Read Rev ID error!\n");
 			return -1;
 		}
-//printf("Found PFUZE100! deviceid=%x,revid=%x\n", value, rev_id);
+		printf("PMIC:  deviceid=%x, revid=%x\n", value, rev_id);
 		/*set VGEN1 to 1.5V and enable*/
 		if (i2c_read(0x8, 0x6c, 1, &value, 1)) {
 			printf("Read VGEN1 error!\n");
@@ -930,95 +1115,22 @@ static int setup_pmic_voltages(void)
 	return 0;
 }
 
-#ifdef CONFIG_PREBOOT
-struct button_key {
-	char const	*name;
-	unsigned	gpnum;
-	char		ident;
-};
-
-static struct button_key const buttons[] = {
-	{"back",	IMX_GPIO_NR(2, 2),	'B'},
-	{"home",	IMX_GPIO_NR(2, 4),	'H'},
-	{"menu",	IMX_GPIO_NR(2, 1),	'M'},
-	{"search",	IMX_GPIO_NR(2, 3),	'S'},
-	{"volup",	IMX_GPIO_NR(7, 13),	'V'},
-	{"voldown",	IMX_GPIO_NR(4, 5),	'v'},
-};
-
-/*
- * generate a null-terminated string containing the buttons pressed
- * returns number of keys pressed
- */
-static int read_keys(char *buf)
-{
-	int i, numpressed = 0;
-	for (i = 0; i < ARRAY_SIZE(buttons); i++) {
-		if (!gpio_get_value(buttons[i].gpnum))
-			buf[numpressed++] = buttons[i].ident;
-	}
-	buf[numpressed] = '\0';
-	return numpressed;
-}
-
-static int do_kbd(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
-{
-	char envvalue[ARRAY_SIZE(buttons)+1];
-	int numpressed = read_keys(envvalue);
-	setenv("keybd", envvalue);
-	return numpressed == 0;
-}
-
-U_BOOT_CMD(
-	kbd, 1, 1, do_kbd,
-	"Tests for keypresses, sets 'keybd' environment variable",
-	"Returns 0 (true) to shell if key is pressed."
-);
-
-static char const kbd_magic_prefix[] = "key_magic";
-static char const kbd_command_prefix[] = "key_cmd";
-
-static void preboot_keys(void)
-{
-	int numpressed;
-	char keypress[ARRAY_SIZE(buttons)+1];
-	numpressed = read_keys(keypress);
-	if (numpressed) {
-		char *kbd_magic_keys = getenv("magic_keys");
-		char *suffix;
-		/*
-		 * loop over all magic keys
-		 */
-		for (suffix = kbd_magic_keys; *suffix; ++suffix) {
-			char *keys;
-			char magic[sizeof(kbd_magic_prefix) + 1];
-			sprintf(magic, "%s%c", kbd_magic_prefix, *suffix);
-			keys = getenv(magic);
-			if (keys) {
-				if (!strcmp(keys, keypress))
-					break;
-			}
-		}
-		if (*suffix) {
-			char cmd_name[sizeof(kbd_command_prefix) + 1];
-			char *cmd;
-			sprintf(cmd_name, "%s%c", kbd_command_prefix, *suffix);
-			cmd = getenv(cmd_name);
-			if (cmd) {
-				setenv("preboot", cmd);
-				return;
-			}
-		}
-	}
-}
-#endif // #ifdef CONFIG_PREBOOT
-
 #ifdef CONFIG_CMD_BMODE
+/* BOOT_CFG1, BOOT_CFG2, BOOT_CFG3, BOOT_CFG4
+ * see Table 8-11 and Table 5-9
+ *  BOOT_CFG1[7] = 1 (boot from NAND)
+ *  BOOT_CFG1[5] = 0 - raw NAND
+ *  BOOT_CFG1[4] = 0 - default pad settings
+ *  BOOT_CFG1[3:2] = 00 - devices = 1
+ *  BOOT_CFG1[1:0] = 00 - Row Address Cycles = 3
+ *  BOOT_CFG2[4:3] = 00 - Boot Search Count = 2
+ *  BOOT_CFG2[2:1] = 01 - Pages In Block = 64
+ *  BOOT_CFG2[0] = 0 - Reset time 12ms
+ */
 static const struct boot_mode board_boot_modes[] = {
-	/* 4 bit bus width */
-	{"mmc0",	MAKE_CFGVAL(0x40, 0x30, 0x00, 0x00)},
-//	{"mmc1",	MAKE_CFGVAL(0x40, 0x38, 0x00, 0x00)},
-	{NULL,		0},
+	/* NAND: raw, 64pages per block, 3 row addr cycles, 2 copies of FCB/DBBT */
+	{ "nand", MAKE_CFGVAL(0x80, 0x02, 0x00, 0x00) },
+	{ NULL,	0 },
 };
 #endif
 
@@ -1043,7 +1155,6 @@ int overwrite_console(void)
 int board_early_init_f(void)
 {
 	setup_iomux_uart();
-	setup_gpio();
 #ifdef CONFIG_MXC_SPI
 	setup_spi();
 #endif
@@ -1060,25 +1171,95 @@ int board_early_init_f(void)
 #if defined(CONFIG_DISPLAY_BOARDINFO)
 /* Identify board and display banner/info
  */
+#define SRC_SBMR1 0x020d8004  // holds BOOT_CFG1-BOOT_CFG4 from eFuse/pins
+#define SRC_SBMR2 0x020d801c
+#define SRC_GPR9  0x020d8040  // holds copy of BOOT_CFG1-BOOT_CFG4 acted on
+#define SRC_GPR10 0x020d8044
+
+void show_boot_mode(uint boot_cfg)
+{
+// this reads boot_cfg efuse/pins - does not reflect what actually booted
+// from if you used bmode
+//printf("BOOT_CFG1=0x%02x\n", src_sbmr1 & 0xff);
+//printf("BOOT_CFG2=0x%02x\n", (src_sbmr1 >> 8) & 0xff);
+//printf("BOOT_CFG3=0x%02x\n", (src_sbmr1 >> 16) & 0xff);
+//printf("BOOT_CFG4=0x%02x\n", (src_sbmr1 >> 24) & 0xff);
+	switch ((boot_cfg & 0x000000ff) >> 4) {
+	case 0x2:
+		printf("SATA");
+		break;
+	case 0x3:
+		printf("SPI NOR");
+		break;
+	case 0x4:
+	case 0x5:
+		// BOOT_CFG2[3:4] is devno
+		printf(" SD%d", (boot_cfg & 0x00001800) >> 11);
+    break;
+  case 0x6:
+  case 0x7:
+		// BOOT_CFG2[3:4] is devno
+		printf(" MMC%d", (boot_cfg & 0x00001800) >> 11);
+    break;
+  case 0x8 ... 0xf:
+		printf("NAND");
+    break;
+  default:
+		printf("Unknown");
+    break;
+  }
+	printf(" 0x%08x\n", boot_cfg);
+}
+
+
 int checkboard(void)
 {
-	struct ventana_board_info *info;
-//printf("%s\n", __func__);
+	struct ventana_board_info *info = &ventana_info;
+	uint src_sbmr2 = readl(SRC_SBMR2);
+	uint src_gpr10 = readl(SRC_GPR10);
+
+	read_eeprom();
+	if (!(src_sbmr2 & 1<<4)) {
+		// can consider this 'manufacturing mode' if needed
+		printf("First boot - eFUSE not blown\n");
+	}
+
+	//if (src_gpr10 & 1<<30)
+	//	printf("APP_IMAGE: Secondary\n");
+	printf("APP_IMAGE: %s\n", (src_gpr10 & 1<<30)?"Secondary":"Primary");
+	if (src_gpr10 & 1<<29)
+		printf("NAND: bad blocks in application image\n");
+
+#if defined(CONFIG_ENV_IS_IN_SPI_FLASH)
+	printf("Env: SPI FLASH\n");
+#elif defined(CONFIG_ENV_IS_IN_MMC)
+	printf("Env: MMC\n");
+#elif defined(CONFIG_ENV_IS_IN_NAND)
+	printf("Env: NAND FLASH\n");
+#endif
+
+	// SRC_SBMR1 reflects eFUSE/pin
+	printf("BOOT_CFG: ");
+	show_boot_mode(readl(SRC_SBMR1));
+	// SRC_GPR9 reflects what was actually booted off of if not 0
+	// (ie if bmode was used)
+	if (readl(SRC_GPR9)) {
+		printf("BMODE: ");
+		show_boot_mode(readl(SRC_GPR9));
+	}
+	printf("\n");
 
 	printf("Gateworks Corporation Copyright 2013\n");
-
-	mdelay(1000); // I believe this is needed to wait for GSC to powerup w/o battery - need to investigate
- 	info = read_eeprom(1);
-	if (info) {
-		printf("Model Number: %s\n", info->model);
-		printf("Manufacturer Date: %02x-%02x-%02x%02x\n",
+	if (info->model[0]) {
+		printf("Model: %s\n", info->model);
+		printf("MFGDate: %02x-%02x-%02x%02x\n",
 			info->mfgdate[0], info->mfgdate[1],
 			info->mfgdate[2], info->mfgdate[3]);
-		printf("Serial #: %d\n", info->serial);
+		printf("Serial:%d\n", info->serial);
 	} else {
 		printf("Invalid EEPROM - board will not function fully\n");
 	}
-	//return 1; //hang
+
 	return 0;
 }
 #endif
@@ -1087,10 +1268,9 @@ int checkboard(void)
  */
 int dram_init(void)
 {
-	struct ventana_board_info *info = read_eeprom(0);
+	struct ventana_board_info *info = &ventana_info;
 
-//printf("%s\n", __func__);
-	if (info && info->sdram_size > 0 && info->sdram_size < 9) {
+	if (info->model[0] && info->sdram_size > 0 && info->sdram_size < 9) {
 		int i = info->sdram_size;
 		gd->ram_size = 32*1024*1024;
 		while(--i)
@@ -1109,7 +1289,10 @@ int board_init(void)
 {
 	int ret = 0;
  
-//printf("%s\n", __func__);
+#ifdef CONFIG_CMD_NAND
+	setup_gpmi_nand();
+#endif
+
 	/* address of linux boot parameters */
 	gd->bd->bi_boot_params = PHYS_SDRAM + 0x100;
 
@@ -1125,6 +1308,37 @@ int board_init(void)
 	setup_sata();
 #endif
 
+	if (!i2c_set_bus_num(0)) {
+		unsigned char buf[4];
+		if (!gsc_i2c_read(0x20, 14, 1, buf, 1)) {
+			printf("GSC:   v%d", buf[0]);
+			if (!gsc_i2c_read(0x20, 10, 1, buf, 4)) {
+				/* show firmware revision and CRC */
+				printf(" 0x%04x", buf[2] | buf[3]<<8);
+				/* show status register */
+				printf(" 0x%02x", buf[0]);
+				/* display if encountered a GSC watchdog timeout */
+				if (buf[0] & 0x40) {
+					printf(" WD_TIMEOUT");
+					/* clear flag */
+					buf[0] &= ~0x40;
+					gsc_i2c_write(0x20, 1, 1, &buf[0], 1);
+				}
+			}
+			printf("\n");
+		}
+		if (!gsc_i2c_read(0x68, 0x00, 1, buf, 4))
+			printf("RTC:   %d\n", buf[0] | buf[1]<<8 | buf[2]<<16 | buf[3]<<24);
+	}
+
+#ifdef CONFIG_CMD_GSC
+	// if eFUSE not blown show GSC HWMON info
+	if (!(readl(SRC_SBMR2) & 1<<4)) {
+		mdelay(1500);
+		do_gsc(NULL, 0, 0, NULL);
+	}
+#endif
+
 	return 0;
 }
 
@@ -1132,205 +1346,218 @@ int board_init(void)
  */
 int misc_init_r(void)
 {
-	struct ventana_board_info *info = read_eeprom(0);
+	/* set env vars based on board model from EEPROM */
+	if (ventana_info.model[0]) {
+		char str[20];
+		char fdt[30];
+		char *p;
+		int i;
 
-//printf("%s\n", __func__);
-/*
-	char *env;
-	char str[20];
- 	env = getenv("ethaddr");
-	if (!env && info) {
-		sprintf(str, "%02X:%02X:%02X:%02X:%02X:%02X",
-			info->mac0[0], info->mac0[1],
-			info->mac0[2], info->mac0[3],
-			info->mac0[4], info->mac0[5]) ;
-		printf("### Setting environment from ROM MAC address = \"%s\"\n", str);
-		setenv("ethaddr", str);
-		setenv("eth0addr", str);
+		memset(str, 0, sizeof(str));
+		for (i = 0; i < sizeof(ventana_info.model) && ventana_info.model[i]; i++)
+			str[i] = tolower(ventana_info.model[i]);
+		if (!getenv("model"))
+			setenv("model", str);
+		if (!getenv("fdt_file")) {
+			sprintf(fdt, "imx6q-%s.dtb", str);
+			setenv("fdt_file", fdt);
+		}
+		if ( (p = strchr(str, '-')) ) {
+			*p++ = 0;
+
+			setenv("model_base", str);
+			if (!getenv("fdt_file1")) {
+				sprintf(fdt, "imx6q-%s.dtb", str);
+				setenv("fdt_file1", fdt);
+			}
+			str[4] = 'x';
+			str[5] = 'x';
+			str[6] = 0;
+			if (!getenv("fdt_file2")) {
+				sprintf(fdt, "imx6q-%s.dtb", str);
+				setenv("fdt_file2", fdt);
+			}
+		}
+		get_mac("ethaddr", ventana_info.mac0);
+		get_mac("eth1addr", ventana_info.mac1);
+		sprintf(str, "%6d", ventana_info.serial);
+		setenv("serial#", str);
+		setup_board_gpio(getenv("model"));
 	}
-*/
 
-	if (info) {
-		get_mac("ethaddr", info->mac0);
-		get_mac("eth1addr", info->mac1);
+	/* generate a random eth mac if no EEPROM (1st boot - mfg mode) */
+	else {
+		u32 ethaddr_low, ethaddr_high;
+		char str[20];
+
+		imx_otp_read_one_u32(0x01, &ethaddr_low);
+		imx_otp_read_one_u32(0x01, &ethaddr_high);
+
+		/*
+		 * setting the 2nd LSB in the most significant byte of
+		 * the address makes it a locally administered ethernet
+		 * address
+		 */
+    ethaddr_high &= 0xfeff;
+		ethaddr_high |= 0x0200;
+		sprintf(str, "%02X:%02X:%02X:%02X:%02X:%02X",
+			ethaddr_high >> 8, ethaddr_high & 0xff,
+			ethaddr_low >> 24, (ethaddr_low >> 16) & 0xff,
+			(ethaddr_low >> 8) & 0xff, ethaddr_low & 0xff);
+		printf("### Setting random MAC address = \"%s\"\n", str);
+		setenv("ethaddr", str);
 	}
 
 #ifdef CONFIG_CMD_BMODE
 	add_board_boot_modes(board_boot_modes);
 #endif
+
+	/* disable GSC boot watchdog
+	 *
+	 *  The Gateworks System Controller implements a boot
+	 *  watchdog (always enabled) to cover things like ERR006282 which can
+	 *  lead to random boot failures.
+	 */
+	if (!i2c_set_bus_num(0)) {
+		unsigned char val;
+		if (!gsc_i2c_read(0x20, 1, 1, &val, 1)) {
+			val |= 0x80;
+			if (gsc_i2c_write(0x20, 1, 1, &val, 1))
+				printf("Error: could not disable GSC Watchdog\n");
+		} else {
+			printf("Error: could not disable GSC Watchdog\n");
+		}
+	}
+
 	return 0;
 }
 
 #if defined(CONFIG_OF_LIBFDT) && defined(CONFIG_OF_BOARD_SETUP)
-static int disable_node(void *blob, const char *name, const char *path)
-{
-	int rc = fdt_find_and_setprop(blob, path, "status",
-				"disabled", sizeof("disabled"), 1);
-	if (rc) {
-		printf("Unable to update status property in %s node: err=%s\n",
-			name, fdt_strerror(rc));
-	}
-	return rc;
-}
-
 void ft_board_setup(void *blob, bd_t * bd)
 {
-	struct ventana_board_info *info = read_eeprom(0);
-#if 0
+	struct ventana_board_info *info = &ventana_info;
 	struct node_info nodes[] = {
-		{ "sst,w25q256",    MTD_DEV_TYPE_NAND, },
+		{ "sst,w25q256",          MTD_DEV_TYPE_NOR, },  // SPI flash
+		{ "fsl,imx6q-gpmi-nand",  MTD_DEV_TYPE_NAND, }, // NAND flash
 	};
-#endif
+  const char *model = getenv("model");
 
 	if (getenv("fdt_noauto")) {
-		printf("skiping ft_board_setup\n");
+		printf("   Skiping ft_board_setup (fdt_noauto defined)\n");
 		return;
 	}
 
-	if (!info) {
-		printf("invalid board info: Leaving DTB fully enabled\n");
+  if (!model) {
+		printf("invalid board info: Leaving FDT fully enabled\n");
 		return;
 	}
 
-	printf("Adjusting DTB per EEPROM configuraiton...\n");
+	/* MTD partitions
+	 * Update partition nodes using info from mtdparts env var
+	 */
+	printf("   Updating MTD partitions...\n");
+	fdt_fixup_mtdparts(blob, nodes, ARRAY_SIZE(nodes));
 
+	printf("   Adjusting FDT per EEPROM for %s...\n", model);
 	/* Note that fdt_fixup_ethernet is called in arm/lib/bootm before this
 	 * which sets mac-address and local-mac-address properties of
 	 * ethernet<n> aliases to ethaddr...eth<n>addr env
 	 */
 
-#if 0
-	/* MTD partitions */
-	fdt_fixup_mtdparts(blob, nodes, ARRAY_SIZE(nodes));
-#endif
-
-	/* GPIO config: dio{0-3}
-	 * TODO: setup pinmux for GPIO vs PWM depending on info->config_dio<n> and/or env
-	 */
-
-	/* SDRAM config: sdram_{size,speed,width} */
-
-	/* CPU config: cpu_{speed,type} */
-
-	/* FLASH config: nor_flash_size, spi_flash_size */
+	/* board serial number */
+	fdt_setprop(blob, 0, "system-serial", getenv("serial#"), strlen(getenv("serial#") + 1));
 
 	/* Peripheral Config */
-	if (!info->config_eth0) {
-		disable_node(blob, "fec", "/soc/aips-bus@02100000/ethernet@02188000");
-	}
-	if (!info->config_eth1) { }
-	if (!info->config_sata) { }
-	if (!info->config_ssi0) {
-		disable_node(blob, "ssi1",
-			"/soc/aips-bus@02000000/spba-bus@02000000/ssi@02028000");
-	}
-	if (!info->config_ssi1) {
-		disable_node(blob, "ssi2",
-			"/soc/aips-bus@02000000/spba-bus@02000000/ssi@0202c000");
-	}
-	if (!info->config_ipu0) {
-		disable_node(blob, "ipu1", "/soc/ipu@02400000");
-	}
-	if (!info->config_ipu1) {
-		disable_node(blob, "ipu2", "/soc/ipu@02800000");
-	}
-	if (!info->config_mipi_csi) {
-		disable_node(blob, "mipi_csi", "/soc/aips-bus@02100000/mipi@021dc000");
-	}
-	if (!info->config_mipi_dsi) {
-		disable_node(blob, "mipi_dsi", "/soc/aips-bus@02100000/mipi@021e0000");
-	}
-	if (!info->config_tzasc0) {
-		disable_node(blob, "tzasc1", "/soc/aips-bus@02100000/tzasc@021d0000");
-	}
-	if (!info->config_tzasc1) {
-		disable_node(blob, "tzasc2", "/soc/aips-bus@02100000/tzasc@021d4000");
-	}
-	if (!info->config_caam) {
-		disable_node(blob, "caam", "/soc/aips-bus@02100000/caam@02100000");
-	}
-	if (!info->config_flexcan) {
-		disable_node(blob, "flexcan", "/soc/aips-bus@02000000/flexcan@02094000");
-	}
-	if (!info->config_vpu) {
-		disable_node(blob, "vpu", "/soc/aips-bus@02000000/vpu@02040000");
-	}
-	if (!info->config_i2c0) {
-		disable_node(blob, "i2c1", "/soc/aips-bus@02100000/i2c@021a0000");
-	}
-	if (!info->config_i2c1) {
-		disable_node(blob, "i2c2", "/soc/aips-bus@02100000/i2c@021a4000");
-	}
-	if (!info->config_i2c2) {
-		disable_node(blob, "i2c3", "/soc/aips-bus@02100000/i2c@021a8000");
-	}
-	if (!info->config_pcie) {
-		disable_node(blob, "pcie", "/soc/aips-bus@02100000/pcie@01ffc000");
-	}
-	if (!info->config_usb0) {
-		disable_node(blob, "usbh3", "/soc/aips-bus@02100000/usb@02184600");
-	}
-	if (!info->config_usb1) {
-		disable_node(blob, "usbotg",
-			"/soc/aips-bus@02000000/iomuxc@020e0000/usbotg");
-	}
-	if (!info->config_sd0) {
-		disable_node(blob, "sd1", "/soc/aips-bus@02100000/usdhc@02190000");
-	}
-	if (!info->config_sd1) {
-		disable_node(blob, "sd2", "/soc/aips-bus@02100000/usdhc@02194000");
-	}
-	if (!info->config_sd2) {
-		disable_node(blob, "sd3", "/soc/aips-bus@02100000/usdhc@02198000");
-	}
-	if (!info->config_sd3) {
-		disable_node(blob, "sd4", "/soc/aips-bus@02100000/usdhc@0219c000");
-	}
-	if (!info->config_uart0) {
-		disable_node(blob, "uart1",
-			"/soc/aips-bus@02000000/spba-bus@02000000/serial@02020000");
-	}
-	if (!info->config_uart1) {
-printf("leaving uart2 enabled - must be invalid eeprom\n");
-/*
-		disable_node(blob, "uart2",
-			"/soc/aips-bus@02100000/serial@021e8000");
-*/
-	}
-	if (!info->config_uart2) {
-		disable_node(blob, "uart3",
-			"/soc/aips-bus@02100000/serial@021ec000");
-	}
-	if (!info->config_uart3) {
-		disable_node(blob, "uart4",
-			"/soc/aips-bus@02100000/serial@021f0000");
-	}
-	if (!info->config_uart4) {
-		disable_node(blob, "uart5",
-			"/soc/aips-bus@02100000/serial@021f4000");
-	}
-	if (!info->config_espci0) {
-printf("leaving spi1 enabled - must be invalid eeprom\n");
-/*
-		disable_node(blob, "spi1",
-			"/soc/aips-bus@02000000/spba-bus@02000000/ecspi@02008000");
-*/
-	}
-	if (!info->config_espci1) {
-		disable_node(blob, "spi2",
-			"/soc/aips-bus@02000000/spba-bus@02000000/ecspi@0200c000");
-	}
-	if (!info->config_espci2) {
-		disable_node(blob, "spi3",
-			"/soc/aips-bus@02000000/spba-bus@02000000/ecspi@02010000");
-	}
-	if (!info->config_espci3) {
-		disable_node(blob, "spi4",
-			"/soc/aips-bus@02000000/spba-bus@02000000/ecspi@02014000");
-	}
-	if (!info->config_espci4) {
-		disable_node(blob, "spi5",
-			"/soc/aips-bus@02000000/spba-bus@02000000/ecspi@02018000");
-	}
+	if (!info->config_eth0)
+		fdt_del_node_and_alias(blob, "ethernet0");
+	if (!info->config_eth1)
+		fdt_del_node_and_alias(blob, "ethernet1");
+	if (!info->config_hdmi_out)
+		fdt_del_node_and_alias(blob, "hdmi_out");
+	if (!info->config_sata)
+		fdt_del_node_and_alias(blob, "ahci0");
+	if (!info->config_pcie)
+		fdt_del_node_and_alias(blob, "pcie");
+	if (!info->config_ssi0)
+		fdt_del_node_and_alias(blob, "ssi0");
+	if (!info->config_ssi1)
+		fdt_del_node_and_alias(blob, "ssi1");
+	if (!info->config_lcd)
+		fdt_del_node_and_alias(blob, "lcd0");
+	if (!info->config_lvds0)
+		fdt_del_node_and_alias(blob, "lvds0");
+	if (!info->config_lvds1)
+		fdt_del_node_and_alias(blob, "lvds1");
+	if (!info->config_usb0)
+		fdt_del_node_and_alias(blob, "usb0");
+	if (!info->config_usb1)
+		fdt_del_node_and_alias(blob, "usb1");
+	if (!info->config_sd0)
+		fdt_del_node_and_alias(blob, "usdhc0");
+	if (!info->config_sd1)
+		fdt_del_node_and_alias(blob, "usdhc1");
+	if (!info->config_sd2)
+		fdt_del_node_and_alias(blob, "usdhc2");
+	if (!info->config_sd3)
+		fdt_del_node_and_alias(blob, "usdhc3");
+	if (!info->config_uart0)
+		fdt_del_node_and_alias(blob, "serial0");
+	if (!info->config_uart1)
+		fdt_del_node_and_alias(blob, "serial1");
+	if (!info->config_uart2)
+		fdt_del_node_and_alias(blob, "serial2");
+	if (!info->config_uart3)
+		fdt_del_node_and_alias(blob, "serial3");
+	if (!info->config_uart4)
+		fdt_del_node_and_alias(blob, "serial4");
+	if (!info->config_ipu0)
+		fdt_del_node_and_alias(blob, "ipu0");
+	if (!info->config_ipu1)
+		fdt_del_node_and_alias(blob, "ipu1");
+	if (!info->config_flexcan)
+		fdt_del_node_and_alias(blob, "can0");
+	if (!info->config_mipi_dsi)
+		fdt_del_node_and_alias(blob, "mipi_dsi");
+	if (!info->config_mipi_csi)
+		fdt_del_node_and_alias(blob, "mipi_csi");
+	if (!info->config_tzasc0)
+		fdt_del_node_and_alias(blob, "tzasc0");
+	if (!info->config_tzasc1)
+		fdt_del_node_and_alias(blob, "tzasc1");
+	if (!info->config_i2c0)
+		fdt_del_node_and_alias(blob, "i2c0");
+	if (!info->config_i2c1)
+		fdt_del_node_and_alias(blob, "i2c1");
+	if (!info->config_i2c2)
+		fdt_del_node_and_alias(blob, "i2c2");
+	if (!info->config_vpu)
+		fdt_del_node_and_alias(blob, "vpu");
+	if (!info->config_csi0)
+		fdt_del_node_and_alias(blob, "csi0");
+	if (!info->config_csi1)
+		fdt_del_node_and_alias(blob, "csi1");
+	if (!info->config_caam)
+		fdt_del_node_and_alias(blob, "caam");
+	if (!info->config_espci0)
+		fdt_del_node_and_alias(blob, "spi0");
+	if (!info->config_espci1)
+		fdt_del_node_and_alias(blob, "spi1");
+	if (!info->config_espci2)
+		fdt_del_node_and_alias(blob, "spi2");
+	if (!info->config_espci3)
+		fdt_del_node_and_alias(blob, "spi3");
+	if (!info->config_espci4)
+		fdt_del_node_and_alias(blob, "spi4");
+	if (!info->config_espci5)
+		fdt_del_node_and_alias(blob, "spi5");
+	if (!info->config_hdmi_in)
+		fdt_del_node_and_alias(blob, "hdmi_in");
+	if (!info->config_vid_out)
+		fdt_del_node_and_alias(blob, "cvbs_out");
+	if (!info->config_vid_in)
+		fdt_del_node_and_alias(blob, "cvbs_in");
+	if (!info->config_nand)
+		fdt_del_node_and_alias(blob, "nand");
 }
 #endif /* defined(CONFIG_OF_FLAT_TREE) && defined(CONFIG_OF_BOARD_SETUP) */
+
