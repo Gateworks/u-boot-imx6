@@ -616,22 +616,23 @@ static void setup_board_gpio(const char* model)
 	if (strncasecmp(model, "GW54", 4) == 0) {
 		if (strncasecmp(model, "GW5400-A", 8) == 0) {
 			// PANLEDG#
-			imx_iomux_v3_setup_pad(MX6Q_PAD_KEY_COL0__GPIO_4_6);
+			imx_iomux_v3_setup_pad(MX6Q_PAD_KEY_COL0__GPIO_4_6 | MUX_PAD_CTRL(NO_PAD_CTRL));
 			gpio_direction_output(IMX_GPIO_NR(4, 6), 1);  // grn off
 
 			// PANLEDR#
-			imx_iomux_v3_setup_pad(MX6Q_PAD_KEY_COL2__GPIO_4_10);
+			imx_iomux_v3_setup_pad(MX6Q_PAD_KEY_COL2__GPIO_4_10 | MUX_PAD_CTRL(NO_PAD_CTRL));
 			gpio_direction_output(IMX_GPIO_NR(4, 10), 1); // red off
 
 			// MX6_LOCLED#
-			imx_iomux_v3_setup_pad(MX6Q_PAD_KEY_ROW4__GPIO_4_15);
+			imx_iomux_v3_setup_pad(MX6Q_PAD_KEY_ROW4__GPIO_4_15 | MUX_PAD_CTRL(NO_PAD_CTRL));
 			gpio_direction_output(IMX_GPIO_NR(4, 15), 1); // loc off
 
 			// MIPI DIO
-			imx_iomux_v3_setup_pad(MX6Q_PAD_SD1_DAT3__GPIO_1_21);
+			imx_iomux_v3_setup_pad(MX6Q_PAD_SD1_DAT3__GPIO_1_21 | MUX_PAD_CTRL(NO_PAD_CTRL));
 
-			// UART1 Transmit Enable
-			imx_iomux_v3_setup_pad(MX6Q_PAD_EIM_D24__GPIO_3_24);
+			// RS485 Transmit Enable
+			imx_iomux_v3_setup_pad(MX6Q_PAD_EIM_D24__GPIO_3_24 | MUX_PAD_CTRL(NO_PAD_CTRL));
+			gpio_direction_output(IMX_GPIO_NR(3, 24), 0);
 
 			// Expansion IO0 - PWREN#
 			imx_iomux_v3_setup_pad(MX6Q_PAD_KEY_ROW0__GPIO_4_7);
@@ -646,19 +647,20 @@ static void setup_board_gpio(const char* model)
 		       || (strncasecmp(model, "GW5410", 6) == 0)
 		) {
 			// PANLEDG#
-			imx_iomux_v3_setup_pad(MX6Q_PAD_KEY_COL0__GPIO_4_6);
+			imx_iomux_v3_setup_pad(MX6Q_PAD_KEY_COL0__GPIO_4_6 | MUX_PAD_CTRL(NO_PAD_CTRL));
 			gpio_direction_output(IMX_GPIO_NR(4, 6), 1);  // grn off
 
 			// PANLEDR#
-			imx_iomux_v3_setup_pad(MX6Q_PAD_KEY_ROW0__GPIO_4_7);
-			gpio_direction_output(IMX_GPIO_NR(4, 7), 1);  // grn off
+			imx_iomux_v3_setup_pad(MX6Q_PAD_KEY_ROW0__GPIO_4_7 | MUX_PAD_CTRL(NO_PAD_CTRL));
+			gpio_direction_output(IMX_GPIO_NR(4, 7), 1);  // red off
 
 			// MX6_LOCLED#
-			imx_iomux_v3_setup_pad(MX6Q_PAD_KEY_ROW4__GPIO_4_15);
+			imx_iomux_v3_setup_pad(MX6Q_PAD_KEY_ROW4__GPIO_4_15 | MUX_PAD_CTRL(NO_PAD_CTRL));
 			gpio_direction_output(IMX_GPIO_NR(4, 15), 1);  // grn off
 
-			// UART1 Transmit Enable
-			imx_iomux_v3_setup_pad(MX6Q_PAD_SD3_DAT4__GPIO_7_1);
+			// RS485 Transmit Enable
+			imx_iomux_v3_setup_pad(MX6Q_PAD_SD3_DAT4__GPIO_7_1 | MUX_PAD_CTRL(NO_PAD_CTRL));
+			gpio_direction_output(IMX_GPIO_NR(7, 1), 0);
 
 			// Expansion IO0 - PWREN#
 			imx_iomux_v3_setup_pad(MX6Q_PAD_EIM_A19__GPIO_2_19);
@@ -669,18 +671,19 @@ static void setup_board_gpio(const char* model)
 			gpio_direction_input(IMX_GPIO_NR(2, 18));
 
 			// MSATA Enable
-			imx_iomux_v3_setup_pad(MX6Q_PAD_SD4_DAT0__GPIO_2_8);
+			imx_iomux_v3_setup_pad(MX6Q_PAD_SD4_DAT0__GPIO_2_8 | MUX_PAD_CTRL(NO_PAD_CTRL));
 			gpio_direction_output(IMX_GPIO_NR(2, 8), (hwconfig("msata"))?1:0);
 			printf("MSATA: %s\n", (hwconfig("msata")?"enabled":"disabled"));
 		}
 
 		// UART2_EN#
-		imx_iomux_v3_setup_pad(MX6Q_PAD_SD4_DAT3__GPIO_2_11);
+		imx_iomux_v3_setup_pad(MX6Q_PAD_SD4_DAT3__GPIO_2_11 | MUX_PAD_CTRL(NO_PAD_CTRL));
 		printf("RS232: %s\n", (hwconfig("rs232"))?"enabled":"disabled");
-		gpio_direction_output(IMX_GPIO_NR(2, 11), (hwconfig("rs232"))?1:0);
+		gpio_direction_output(IMX_GPIO_NR(2, 11), (hwconfig("rs232"))?0:1);
+		// TODO: flush UART RX FIFO after disable
 
 		// DIOI2C_DIS#
-		imx_iomux_v3_setup_pad(MX6Q_PAD_GPIO_19__GPIO_4_5);
+		imx_iomux_v3_setup_pad(MX6Q_PAD_GPIO_19__GPIO_4_5 | MUX_PAD_CTRL(NO_PAD_CTRL));
 		gpio_direction_output(IMX_GPIO_NR(4,  5), 0);
 
 		/* configure board general purpose IO's based on hwconfig
@@ -689,44 +692,44 @@ static void setup_board_gpio(const char* model)
 		if (hwconfig("dio0")) {
 			if (hwconfig_subarg_cmp("dio0", "mode", "gpio")) {
 				printf("DIO0:  gpio\n");
-				imx_iomux_v3_setup_pad(MX6Q_PAD_GPIO_9__GPIO_1_9);
+				imx_iomux_v3_setup_pad(MX6Q_PAD_GPIO_9__GPIO_1_9 | MUX_PAD_CTRL(NO_PAD_CTRL));
 				gpio_direction_input(IMX_GPIO_NR(1, 9));
 			} else if (hwconfig_subarg_cmp("dio0", "mode", "pwm")) {
 				printf("DIO0:  pwm\n");
-				imx_iomux_v3_setup_pad(MX6Q_PAD_GPIO_9__PWM1_PWMO);
+				imx_iomux_v3_setup_pad(MX6Q_PAD_GPIO_9__PWM1_PWMO | MUX_PAD_CTRL(NO_PAD_CTRL));
 			}
 		}
 		// MX6_DIO1
 		if (hwconfig("dio1")) {
 			if (hwconfig_subarg_cmp("dio1", "mode", "gpio")) {
 				printf("DIO1:  gpio\n");
-				imx_iomux_v3_setup_pad(MX6Q_PAD_SD1_DAT2__GPIO_1_19);
+				imx_iomux_v3_setup_pad(MX6Q_PAD_SD1_DAT2__GPIO_1_19 | MUX_PAD_CTRL(NO_PAD_CTRL));
 				gpio_direction_input(IMX_GPIO_NR(1, 19));
 			} else if (hwconfig_subarg_cmp("dio1", "mode", "pwm")) {
 				printf("DIO1:  pwm\n");
-				imx_iomux_v3_setup_pad(MX6Q_PAD_SD1_DAT2__PWM2_PWMO);
+				imx_iomux_v3_setup_pad(MX6Q_PAD_SD1_DAT2__PWM2_PWMO | MUX_PAD_CTRL(NO_PAD_CTRL));
 			}
 		}
 		// MX6_DIO2
 		if (hwconfig("dio2")) {
 			if (hwconfig_subarg_cmp("dio2", "mode", "gpio")) {
 				printf("DIO2:  gpio\n");
-				imx_iomux_v3_setup_pad(MX6Q_PAD_SD4_DAT1__GPIO_2_9);
+				imx_iomux_v3_setup_pad(MX6Q_PAD_SD4_DAT1__GPIO_2_9 | MUX_PAD_CTRL(NO_PAD_CTRL));
 				gpio_direction_input(IMX_GPIO_NR(2, 9));
 			} else if (hwconfig_subarg_cmp("dio2", "mode", "pwm")) {
 				printf("DIO2:  pwm\n");
-				imx_iomux_v3_setup_pad(MX6Q_PAD_SD4_DAT1__PWM3_PWMO);
+				imx_iomux_v3_setup_pad(MX6Q_PAD_SD4_DAT1__PWM3_PWMO | MUX_PAD_CTRL(NO_PAD_CTRL));
 			}
 		}
 		// MX6_DIO3
 		if (hwconfig("dio3")) {
 			if (hwconfig_subarg_cmp("dio3", "mode", "gpio")) {
 				printf("DIO3:  gpio\n");
-				imx_iomux_v3_setup_pad(MX6Q_PAD_SD4_DAT2__GPIO_2_10);
+				imx_iomux_v3_setup_pad(MX6Q_PAD_SD4_DAT2__GPIO_2_10 | MUX_PAD_CTRL(NO_PAD_CTRL));
 				gpio_direction_input(IMX_GPIO_NR(2, 10));
 			} else if (hwconfig_subarg_cmp("dio3", "mode", "pwm")) {
 				printf("DIO3:  pwm\n");
-				imx_iomux_v3_setup_pad(MX6Q_PAD_SD4_DAT2__PWM4_PWMO);
+				imx_iomux_v3_setup_pad(MX6Q_PAD_SD4_DAT2__PWM4_PWMO | MUX_PAD_CTRL(NO_PAD_CTRL));
 			}
 		}
 	}
