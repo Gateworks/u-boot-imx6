@@ -635,11 +635,11 @@ static void setup_board_gpio(const char* model)
 			gpio_direction_output(IMX_GPIO_NR(3, 24), 0);
 
 			// Expansion IO0 - PWREN#
-			imx_iomux_v3_setup_pad(MX6Q_PAD_KEY_ROW0__GPIO_4_7);
+			imx_iomux_v3_setup_pad(MX6Q_PAD_KEY_ROW0__GPIO_4_7 | MUX_PAD_CTRL(NO_PAD_CTRL));
 			gpio_direction_output(IMX_GPIO_NR(4, 7), 0);
 
 			// Expansion IO1 - IRQ#
-			imx_iomux_v3_setup_pad(MX6Q_PAD_KEY_ROW1__GPIO_4_9);
+			imx_iomux_v3_setup_pad(MX6Q_PAD_KEY_ROW1__GPIO_4_9 | MUX_PAD_CTRL(NO_PAD_CTRL));
 			gpio_direction_input(IMX_GPIO_NR(4, 9));
 		}
 
@@ -663,11 +663,11 @@ static void setup_board_gpio(const char* model)
 			gpio_direction_output(IMX_GPIO_NR(7, 1), 0);
 
 			// Expansion IO0 - PWREN#
-			imx_iomux_v3_setup_pad(MX6Q_PAD_EIM_A19__GPIO_2_19);
+			imx_iomux_v3_setup_pad(MX6Q_PAD_EIM_A19__GPIO_2_19 | MUX_PAD_CTRL(NO_PAD_CTRL));
 			gpio_direction_output(IMX_GPIO_NR(2, 19), 0);
 
 			// Expansion IO1 - IRQ#
-			imx_iomux_v3_setup_pad(MX6Q_PAD_EIM_A20__GPIO_2_18);
+			imx_iomux_v3_setup_pad(MX6Q_PAD_EIM_A20__GPIO_2_18 | MUX_PAD_CTRL(NO_PAD_CTRL));
 			gpio_direction_input(IMX_GPIO_NR(2, 18));
 
 			// MSATA Enable
