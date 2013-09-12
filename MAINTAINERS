@@ -1353,7 +1353,10 @@ Dimitar Penev <dpn@switchfin.org>
 
 Tim Harvey <tharvey@gateworks.com>
 
-	gw_ventana      i.MX6Q
+	gw54xx	i.MX6Q
+	gw51xx	i.MX6DL
+
+Alison Wang <b18965@freescale.com>
 
 #########################################################################
 # NDS32 Systems:							#

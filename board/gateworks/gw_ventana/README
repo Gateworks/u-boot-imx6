@@ -28,8 +28,20 @@ https://trac.gateworks.com/wiki/ventana%3Abuild_uboot
 2. Build
 --------
 
-To build U-Boot for the SabreLite board:
+There are several Gateworks Ventana boards that share a simliar design but
+vary based on CPU, Memory configuration, and subloaded devices.  Although
+the subloaded devices are handled dynamically in the bootloader using
+factory configured EEPROM data to modify the device-tree, the CPU choice
+(IMX6Q vs IMX6DL) and memory configurations are currently compile-time
+options.
 
- make gw_ventana_config
+The following Gateworks Ventana configurations exist:
+ gwventanaq1gspi: MX6Q,1GB,SPI FLASH
+ gwventanaq1g   : MX6Q,1GB,NAND FLASH
+ gwventanadl    : MX6DL,512MB,NAND FLASH
+
+To build U-Boot for the MX6Q,1GB,NAND FLASH for example:
+
+ make gwventanaq1g_config 
  make u-boot.imx
 

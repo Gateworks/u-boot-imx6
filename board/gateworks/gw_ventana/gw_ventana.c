@@ -25,7 +25,7 @@
 #include <asm/arch/clock.h>
 #include <asm/arch/imx-regs.h>
 #include <asm/arch/iomux.h>
-#include <asm/arch/mx6q_pins.h>
+#include <asm/arch/mx6-pins.h>
 #include <asm/arch/crm_regs.h>
 #include <asm/arch/mxc_hdmi.h>
 #include <asm/arch/sys_proto.h>
@@ -72,7 +72,17 @@ DECLARE_GLOBAL_DATA_PTR;
 	PAD_CTL_PUS_100K_DOWN | PAD_CTL_SPEED_MED |		\
 	PAD_CTL_DSE_40ohm     | PAD_CTL_SRE_FAST)
 
+/*
 #define I2C_PAD_CTRL	(PAD_CTL_PKE | PAD_CTL_PUE |		\
+	PAD_CTL_PUS_100K_UP | PAD_CTL_SPEED_MED |		\
+	PAD_CTL_DSE_40ohm | PAD_CTL_HYS |			\
+	PAD_CTL_ODE | PAD_CTL_SRE_FAST)
+*/
+#define I2C_PAD_CTRL  (PAD_CTL_PUS_100K_UP |      \
+  PAD_CTL_SPEED_MED | PAD_CTL_DSE_40ohm | PAD_CTL_HYS | \
+  PAD_CTL_ODE | PAD_CTL_SRE_FAST)
+
+#define DIO_PAD_CTRL	(PAD_CTL_PKE | PAD_CTL_PUE |		\
 	PAD_CTL_PUS_100K_UP | PAD_CTL_SPEED_MED |		\
 	PAD_CTL_DSE_40ohm | PAD_CTL_HYS |			\
 	PAD_CTL_ODE | PAD_CTL_SRE_FAST)
@@ -143,13 +153,13 @@ struct i2c_pads_info i2c_pad_info2 = {
 
 /* MMC */
 iomux_v3_cfg_t const usdhc3_pads[] = {
-       MX6_PAD_SD3_CLK__USDHC3_CLK   | MUX_PAD_CTRL(USDHC_PAD_CTRL),
-       MX6_PAD_SD3_CMD__USDHC3_CMD   | MUX_PAD_CTRL(USDHC_PAD_CTRL),
-       MX6_PAD_SD3_DAT0__USDHC3_DAT0 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
-       MX6_PAD_SD3_DAT1__USDHC3_DAT1 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
-       MX6_PAD_SD3_DAT2__USDHC3_DAT2 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
-       MX6_PAD_SD3_DAT3__USDHC3_DAT3 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
-       MX6_PAD_SD3_DAT5__GPIO_7_0    | MUX_PAD_CTRL(NO_PAD_CTRL), /* CD */
+	MX6_PAD_SD3_CLK__USDHC3_CLK   | MUX_PAD_CTRL(USDHC_PAD_CTRL),
+	MX6_PAD_SD3_CMD__USDHC3_CMD   | MUX_PAD_CTRL(USDHC_PAD_CTRL),
+	MX6_PAD_SD3_DAT0__USDHC3_DAT0 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
+	MX6_PAD_SD3_DAT1__USDHC3_DAT1 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
+	MX6_PAD_SD3_DAT2__USDHC3_DAT2 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
+	MX6_PAD_SD3_DAT3__USDHC3_DAT3 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
+	MX6_PAD_SD3_DAT5__GPIO_7_0    | MUX_PAD_CTRL(NO_PAD_CTRL), /* CD */
 };
 
 /* ENET */
@@ -232,14 +242,6 @@ static void setup_iomux_enet(void)
 	gpio_set_value(IMX_GPIO_NR(1, 30), 1);
 }
 
-iomux_v3_cfg_t const usb_pads[] = {
-	/* HUB reset */
-	MX6_PAD_SD1_DAT0__GPIO_1_16 | MUX_PAD_CTRL(NO_PAD_CTRL),
-
-	/* USBOTG_PWR enable */
-	MX6_PAD_EIM_D22__USBOH3_USBOTG_PWR,
-};
-
 static void setup_iomux_uart(void)
 {
 	imx_iomux_v3_setup_multiple_pads(uart1_pads, ARRAY_SIZE(uart1_pads));
@@ -250,6 +252,14 @@ static void setup_iomux_uart(void)
 }
 
 #ifdef CONFIG_USB_EHCI_MX6
+iomux_v3_cfg_t const usb_pads[] = {
+	/* HUB reset */
+	MX6_PAD_SD1_DAT0__GPIO_1_16 | MUX_PAD_CTRL(NO_PAD_CTRL),
+
+	/* USBOTG_PWR enable */
+	MX6_PAD_EIM_D22__USBOH3_USBOTG_PWR,
+};
+
 int board_ehci_hcd_init(int port)
 {
 	imx_iomux_v3_setup_multiple_pads(usb_pads, ARRAY_SIZE(usb_pads));
@@ -288,6 +298,7 @@ int board_mmc_init(bd_t *bis)
 	u32 index = 0;
 
 	usdhc_cfg[0].sdhc_clk = mxc_get_clock(MXC_ESDHC3_CLK);
+	usdhc_cfg[0].max_bus_width = 4;
 
 	for (index = 0; index < CONFIG_SYS_FSL_USDHC_NUM; ++index) {
 		switch (index) {
@@ -443,20 +454,36 @@ int read_hwmon(const char *name, uint reg, uint size, uint low, uint high)
 
 int do_gsc(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
-	i2c_set_bus_num(0);
-	read_hwmon("Temp",     0x00, 2, 0, 9000);
-	read_hwmon("VIN",      0x02, 3, 8000, 60000);
-	read_hwmon("VDD_3P3",  0x05, 3, 3300*0.9, 3300*1.1);
-	read_hwmon("VBATT",    0x08, 3, 2000*0.9, 3000*1.1);
-	read_hwmon("VDD_CORE", 0x0e, 3, 1375*0.9, 1375*1.1);
-	read_hwmon("VDD_SOC",  0x11, 3, 1375*0.9, 1375*1.1);
-	read_hwmon("VDD_HIGH", 0x14, 3, 3000*0.9, 3000*1.1);
-	read_hwmon("VDD_DDR",  0x17, 3, 1500*0.9, 1500*1.1);
-	read_hwmon("VDD_5P0",  0x0b, 3, 5000*0.9, 5000*1.1);
-	read_hwmon("VDD_2P5",  0x23, 3, 2500*0.9, 2500*1.1);
-	read_hwmon("VDD_1P8",  0x1d, 3, 1800*0.9, 1800*1.1);
-	read_hwmon("VDD_1P0",  0x20, 3, 1000*0.9, 1000*1.1);
+	struct ventana_board_info *info = &ventana_info;
 
+	i2c_set_bus_num(0);
+	if ( (strncasecmp((const char*) info->model, "GW51", 4) == 0)) {
+		read_hwmon("Temp",     0x00, 2, 0, 9000);
+		read_hwmon("VIN",      0x02, 3, 8000, 60000);
+		read_hwmon("VDD_3P3",  0x05, 3, 3300*0.9, 3300*1.1);
+		read_hwmon("VBATT",    0x08, 3, 2000*0.9, 3000*1.1);
+		read_hwmon("VDD_CORE", 0x0e, 3, 1175*0.9, 1175*1.1);
+		read_hwmon("VDD_SOC",  0x11, 3, 1175*0.9, 1175*1.1);
+		read_hwmon("VDD_HIGH", 0x14, 3, 3000*0.9, 3000*1.1);
+		read_hwmon("VDD_DDR",  0x17, 3, 1500*0.9, 1500*1.1);
+		read_hwmon("VDD_5P0",  0x0b, 3, 5000*0.9, 5000*1.1);
+		read_hwmon("VDD_2P5",  0x23, 3, 2500*0.9, 2500*1.1);
+		read_hwmon("VDD_1P8",  0x1d, 3, 1800*0.9, 1800*1.1);
+		read_hwmon("VDD_1P0",  0x20, 3, 1000*0.9, 1000*1.1);
+	} else if ( (strncasecmp((const char*) info->model, "GW54", 4) == 0)) {
+		read_hwmon("Temp",     0x00, 2, 0, 9000);
+		read_hwmon("VIN",      0x02, 3, 8000, 60000);
+		read_hwmon("VDD_3P3",  0x05, 3, 3300*0.9, 3300*1.1);
+		read_hwmon("VBATT",    0x08, 3, 2000*0.9, 3000*1.1);
+		read_hwmon("VDD_CORE", 0x0e, 3, 1375*0.9, 1375*1.1);
+		read_hwmon("VDD_SOC",  0x11, 3, 1375*0.9, 1375*1.1);
+		read_hwmon("VDD_HIGH", 0x14, 3, 3000*0.9, 3000*1.1);
+		read_hwmon("VDD_DDR",  0x17, 3, 1500*0.9, 1500*1.1);
+		read_hwmon("VDD_5P0",  0x0b, 3, 5000*0.9, 5000*1.1);
+		read_hwmon("VDD_2P5",  0x23, 3, 2500*0.9, 2500*1.1);
+		read_hwmon("VDD_1P8",  0x1d, 3, 1800*0.9, 1800*1.1);
+		read_hwmon("VDD_1P0",  0x20, 3, 1000*0.9, 1000*1.1);
+	}
 	return 0;
 }
 
@@ -492,7 +519,13 @@ static void get_mac(char *envvar, unsigned char *def)
  */
 u32 get_board_rev(void)
 {
+#if defined(CONFIG_MX6Q)
 	return 0x63000;
+#elif defined(CONFIG_MX6DL)
+	return 0x61000;
+#else
+#error "unknown CPU type"
+#endif
 }
 
 #ifdef CONFIG_SERIAL_TAG
@@ -614,7 +647,84 @@ int board_eth_init(bd_t *bis)
 
 static void setup_board_gpio(const char* model)
 {
-	if (strncasecmp(model, "GW54", 4) == 0) {
+	if (strncasecmp(model, "GW51", 4) == 0) {
+		// PANLEDG#
+		imx_iomux_v3_setup_pad(MX6_PAD_KEY_COL0__GPIO_4_6 | MUX_PAD_CTRL(NO_PAD_CTRL));
+		gpio_direction_output(IMX_GPIO_NR(4, 6), 1);  // grn off
+
+		// PANLEDR#
+		imx_iomux_v3_setup_pad(MX6_PAD_KEY_ROW0__GPIO_4_7 | MUX_PAD_CTRL(NO_PAD_CTRL));
+		gpio_direction_output(IMX_GPIO_NR(4, 7), 1);  // red off
+
+		// GPS_SHDN
+		imx_iomux_v3_setup_pad(MX6_PAD_GPIO_2__GPIO_1_2 | MUX_PAD_CTRL(NO_PAD_CTRL));
+
+		gpio_direction_output(IMX_GPIO_NR(1, 2), 1);
+
+		// VIDDEC_EN
+/*
+		//imx_iomux_v3_setup_pad(MX6_PAD_CSI0_DATA_EN__GPIO_5_20 | MUX_PAD_CTRL(NO_PAD_CTRL));
+		imx_iomux_v3_setup_pad(MX6_PAD_CSI0_DATA_EN__GPIO_5_20 | MUX_PAD_CTRL(DIO_PAD_CTRL));
+		gpio_direction_output(IMX_GPIO_NR(5, 20), 1);
+*/
+
+		// Expansion IO0 - PWREN#
+		imx_iomux_v3_setup_pad(MX6_PAD_EIM_A19__GPIO_2_19 | MUX_PAD_CTRL(NO_PAD_CTRL));
+		gpio_direction_output(IMX_GPIO_NR(2, 19), 0);
+
+		// Expansion IO1 - IRQ#
+		imx_iomux_v3_setup_pad(MX6_PAD_EIM_A20__GPIO_2_18 | MUX_PAD_CTRL(NO_PAD_CTRL));
+		gpio_direction_input(IMX_GPIO_NR(2, 18));
+
+		/* configure board general purpose IO's based on hwconfig
+		 */
+		// MX6_DIO0
+		if (hwconfig("dio0")) {
+			// Note: no option for DIO0 PWM
+			printf("DIO0:  gpio\n");
+			//imx_iomux_v3_setup_pad(MX6_PAD_SD1_DAT0__GPIO_1_16 | MUX_PAD_CTRL(NO_PAD_CTRL));
+			imx_iomux_v3_setup_pad(MX6_PAD_SD1_DAT0__GPIO_1_16 | MUX_PAD_CTRL(DIO_PAD_CTRL));
+			gpio_direction_input(IMX_GPIO_NR(1, 16));
+		}
+		// MX6_DIO1
+		if (hwconfig("dio1")) {
+			if (hwconfig_subarg_cmp("dio1", "mode", "gpio")) {
+				printf("DIO1:  gpio\n");
+				//imx_iomux_v3_setup_pad(MX6_PAD_SD1_DAT2__GPIO_1_19 | MUX_PAD_CTRL(NO_PAD_CTRL));
+				imx_iomux_v3_setup_pad(MX6_PAD_SD1_DAT2__GPIO_1_19 | MUX_PAD_CTRL(DIO_PAD_CTRL));
+				gpio_direction_input(IMX_GPIO_NR(1, 19));
+			} else if (hwconfig_subarg_cmp("dio1", "mode", "pwm")) {
+				printf("DIO1:  pwm\n");
+				imx_iomux_v3_setup_pad(MX6_PAD_SD1_DAT2__PWM2_PWMO | MUX_PAD_CTRL(NO_PAD_CTRL));
+			}
+		}
+		// MX6_DIO2
+		if (hwconfig("dio2")) {
+			if (hwconfig_subarg_cmp("dio2", "mode", "gpio")) {
+				printf("DIO2:  gpio\n");
+				//imx_iomux_v3_setup_pad(MX6_PAD_SD1_DAT1__GPIO_1_17 | MUX_PAD_CTRL(NO_PAD_CTRL));
+				imx_iomux_v3_setup_pad(MX6_PAD_SD1_DAT1__GPIO_1_17 | MUX_PAD_CTRL(DIO_PAD_CTRL));
+				gpio_direction_input(IMX_GPIO_NR(1, 17));
+			} else if (hwconfig_subarg_cmp("dio2", "mode", "pwm")) {
+				printf("DIO2:  pwm\n");
+				imx_iomux_v3_setup_pad(MX6_PAD_SD1_DAT1__PWM3_PWMO | MUX_PAD_CTRL(NO_PAD_CTRL));
+			}
+		}
+		// MX6_DIO3
+		if (hwconfig("dio3")) {
+			if (hwconfig_subarg_cmp("dio3", "mode", "gpio")) {
+				printf("DIO3:  gpio\n");
+				//imx_iomux_v3_setup_pad(MX6_PAD_SD1_CMD__GPIO_1_18 | MUX_PAD_CTRL(NO_PAD_CTRL));
+				imx_iomux_v3_setup_pad(MX6_PAD_SD1_CMD__GPIO_1_18 | MUX_PAD_CTRL(DIO_PAD_CTRL));
+				gpio_direction_input(IMX_GPIO_NR(1, 18));
+			} else if (hwconfig_subarg_cmp("dio3", "mode", "pwm")) {
+				printf("DIO3:  pwm\n");
+				imx_iomux_v3_setup_pad(MX6_PAD_SD1_CMD__PWM4_PWMO | MUX_PAD_CTRL(NO_PAD_CTRL));
+			}
+		}
+
+	}
+	else if (strncasecmp(model, "GW54", 4) == 0) {
 		if (strncasecmp(model, "GW5400-A", 8) == 0) {
 			// PANLEDG#
 			imx_iomux_v3_setup_pad(MX6_PAD_KEY_COL0__GPIO_4_6 | MUX_PAD_CTRL(NO_PAD_CTRL));
@@ -701,6 +811,7 @@ static void setup_board_gpio(const char* model)
 			}
 		}
 		// MX6_DIO1
+#ifdef CONFIG_MX6Q
 		if (hwconfig("dio1")) {
 			if (hwconfig_subarg_cmp("dio1", "mode", "gpio")) {
 				printf("DIO1:  gpio\n");
@@ -711,6 +822,7 @@ static void setup_board_gpio(const char* model)
 				imx_iomux_v3_setup_pad(MX6_PAD_SD1_DAT2__PWM2_PWMO | MUX_PAD_CTRL(NO_PAD_CTRL));
 			}
 		}
+#endif
 		// MX6_DIO2
 		if (hwconfig("dio2")) {
 			if (hwconfig_subarg_cmp("dio2", "mode", "gpio")) {
@@ -738,15 +850,27 @@ static void setup_board_gpio(const char* model)
 
 static int setup_pcie(void)
 {
-	/* disable spread-spectrum clock: kernel hang when enabled - not clear why */
-	imx_iomux_v3_setup_pad(MX6_PAD_SD1_CLK__GPIO_1_20 | MUX_PAD_CTRL(NO_PAD_CTRL));
-	gpio_direction_output(IMX_GPIO_NR(1, 20), 0); // PCIECK_SSON
+	struct ventana_board_info *info = &ventana_info;
 
-	/* toggle PCI_RST# */
-	imx_iomux_v3_setup_pad(MX6_PAD_ENET_TXD1__GPIO_1_29 | MUX_PAD_CTRL(NO_PAD_CTRL));
-	gpio_direction_output(IMX_GPIO_NR(1, 29), 0); // PCIESWT_RST#
-	mdelay(1);
-	gpio_direction_output(IMX_GPIO_NR(1, 29), 1); // PCIESWT_RST#
+	if ( (strncasecmp((const char*) info->model, "GW51", 4) == 0)) {
+
+		/* toggle PCI_RST# */
+		imx_iomux_v3_setup_pad(MX6_PAD_GPIO_0__GPIO_1_0 | MUX_PAD_CTRL(NO_PAD_CTRL));
+		gpio_direction_output(IMX_GPIO_NR(1, 0), 0); // PCIESWT_RST#
+		mdelay(1);
+		gpio_direction_output(IMX_GPIO_NR(1, 0), 1); // PCIESWT_RST#
+
+	} else if ( (strncasecmp((const char*) info->model, "GW54", 4) == 0)) {
+		/* disable spread-spectrum clock: kernel hang when enabled - not clear why */
+		imx_iomux_v3_setup_pad(MX6_PAD_SD1_CLK__GPIO_1_20 | MUX_PAD_CTRL(NO_PAD_CTRL));
+		gpio_direction_output(IMX_GPIO_NR(1, 20), 0); // PCIECK_SSON
+
+		/* toggle PCI_RST# */
+		imx_iomux_v3_setup_pad(MX6_PAD_ENET_TXD1__GPIO_1_29 | MUX_PAD_CTRL(NO_PAD_CTRL));
+		gpio_direction_output(IMX_GPIO_NR(1, 29), 0); // PCIESWT_RST#
+		mdelay(1);
+		gpio_direction_output(IMX_GPIO_NR(1, 29), 1); // PCIESWT_RST#
+	}
 
 	return 0;
 }
@@ -794,6 +918,7 @@ static struct pwm_device pwm3 = {
 	.pwmo_invert = 0,
 };
 
+#ifdef CONFIG_MX6Q
 /* Parallel RGB Input (Analog Video In) */
 static iomux_v3_cfg_t const vidin_pads[] = {
 	MX6_PAD_EIM_EB2__IPU2_CSI1_D_19,
@@ -808,6 +933,7 @@ static iomux_v3_cfg_t const vidin_pads[] = {
 	MX6_PAD_EIM_EB3__IPU2_CSI1_HSYNC,
 	MX6_PAD_EIM_A16__IPU2_CSI1_PIXCLK,
 };
+#endif
 
 /* Parallel RGB Output (Analog Video Out) */
 static iomux_v3_cfg_t const vidout_pads[] = {
@@ -997,7 +1123,6 @@ int board_video_skip(void)
 static void setup_display(void)
 {
 	struct mxc_ccm_reg *mxc_ccm = (struct mxc_ccm_reg *)CCM_BASE_ADDR;
-	struct anatop_regs *anatop = (struct anatop_regs *)ANATOP_BASE_ADDR;
 	struct iomuxc *iomux = (struct iomuxc *)IOMUXC_BASE_ADDR;
 	struct hdmi_regs *hdmi = (struct hdmi_regs *)HDMI_ARB_BASE_ADDR;
 	int reg;
@@ -1016,10 +1141,6 @@ static void setup_display(void)
 
 	/* clear HDMI PHY reset */
 	writeb(HDMI_MC_PHYRSTZ_DEASSERT, &hdmi->mc_phyrstz);
-
-	/* set PFD1_FRAC to 0x13 == 455 MHz (480*18)/0x13 */
-	writel(ANATOP_PFD_480_PFD1_FRAC_MASK, &anatop->pfd_480_clr);
-	writel(0x13<<ANATOP_PFD_480_PFD1_FRAC_SHIFT, &anatop->pfd_480_set);
 
 	/* set LDB0, LDB1 clk select to 011/011 */
 	reg = readl(&mxc_ccm->cs2cdr);
@@ -1068,7 +1189,7 @@ static void setup_display(void)
 	gpio_direction_input(LVDS_BACKLIGHT_GP);
 	gpio_direction_input(MIPI_BACKLIGHT_GP);
 }
-#endif
+#endif // CONFIG_VIDEO_IPUV3
 
 static int setup_pmic_voltages(void)
 {
@@ -1157,6 +1278,8 @@ int board_early_init_f(void)
 #ifdef CONFIG_MXC_SPI
 	setup_spi();
 #endif
+	/* Note this gets called again later, but needed in case i2c bus is stuck */
+	timer_init();
 	setup_i2c(0, CONFIG_SYS_I2C_SPEED, 0x7f, &i2c_pad_info0);
 	setup_i2c(1, CONFIG_SYS_I2C_SPEED, 0x7f, &i2c_pad_info1);
 	setup_i2c(2, CONFIG_SYS_I2C_SPEED, 0x7f, &i2c_pad_info2);
@@ -1217,6 +1340,15 @@ int checkboard(void)
 	uint src_sbmr2 = readl(SRC_SBMR2);
 	uint src_gpr10 = readl(SRC_GPR10);
 
+	/* check for valid i2c busses - if one was 'stuck' it did not get
+	 * initialized
+	 */
+	if (i2c_set_bus_num(0))
+		printf("invalid /dev/i2c-0\n");
+	if (i2c_set_bus_num(1))
+		printf("invalid /dev/i2c-1\n");
+	if (i2c_set_bus_num(2))
+		printf("invalid /dev/i2c-2\n");
 	read_eeprom();
 	if (!(src_sbmr2 & 1<<4)) {
 		// can consider this 'manufacturing mode' if needed
@@ -1269,14 +1401,12 @@ int dram_init(void)
 {
 	struct ventana_board_info *info = &ventana_info;
 
+	gd->ram_size = ((ulong)CONFIG_DDR_MB * 1024 * 1024);
 	if (info->model[0] && info->sdram_size > 0 && info->sdram_size < 9) {
 		int i = info->sdram_size;
 		gd->ram_size = 32*1024*1024;
 		while(--i)
 			gd->ram_size *=2;
-	} else {
-		// let get_ram_size do its work against 1GB
-		gd->ram_size = get_ram_size((void *)PHYS_SDRAM, PHYS_SDRAM_SIZE);
 	}
 
 	return 0;
@@ -1321,7 +1451,7 @@ int board_init(void)
 					printf(" WD_TIMEOUT");
 					/* clear flag */
 					buf[0] &= ~0x40;
-					gsc_i2c_write(0x20, 1, 1, &buf[0], 1);
+					gsc_i2c_write(0x20, 10, 1, buf, 1);
 				}
 			}
 			printf("\n");
@@ -1347,18 +1477,25 @@ int misc_init_r(void)
 {
 	/* set env vars based on board model from EEPROM */
 	if (ventana_info.model[0]) {
-		char str[20];
-		char fdt[30];
+		char str[sizeof(ventana_info.model)];
+		char fdt[sizeof(ventana_info.model)+20];
 		char *p;
 		int i;
+#if defined(CONFIG_MX6Q)
+		const char *prefix = "imx6q";
+#elif defined(CONFIG_MX6DL)
+		const char *prefix = "imx6dl";
+#else
+#error "unsupported CPU"
+#endif
 
 		memset(str, 0, sizeof(str));
-		for (i = 0; i < sizeof(ventana_info.model) && ventana_info.model[i]; i++)
+		for (i = 0; i < (sizeof(ventana_info.model)-1) && ventana_info.model[i]; i++)
 			str[i] = tolower(ventana_info.model[i]);
 		if (!getenv("model"))
 			setenv("model", str);
 		if (!getenv("fdt_file")) {
-			sprintf(fdt, "imx6q-%s.dtb", str);
+			sprintf(fdt, "%s-%s.dtb", prefix, str);
 			setenv("fdt_file", fdt);
 		}
 		if ( (p = strchr(str, '-')) ) {
@@ -1366,14 +1503,14 @@ int misc_init_r(void)
 
 			setenv("model_base", str);
 			if (!getenv("fdt_file1")) {
-				sprintf(fdt, "imx6q-%s.dtb", str);
+				sprintf(fdt, "%s-%s.dtb", prefix, str);
 				setenv("fdt_file1", fdt);
 			}
 			str[4] = 'x';
 			str[5] = 'x';
 			str[6] = 0;
 			if (!getenv("fdt_file2")) {
-				sprintf(fdt, "imx6q-%s.dtb", str);
+				sprintf(fdt, "%s-%s.dtb", prefix, str);
 				setenv("fdt_file2", fdt);
 			}
 		}
