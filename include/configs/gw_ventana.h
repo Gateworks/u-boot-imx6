@@ -254,7 +254,7 @@
 #define CONFIG_MTD_PARTITIONS
 #ifdef CONFIG_SPI_FLASH
 #define MTDIDS_DEFAULT    "nor0=nor"
-#define MTDPARTS_DEFAULT  "mtdparts=nor:512k(uboot),64k(env),0xf70000(rootfs)"
+#define MTDPARTS_DEFAULT  "mtdparts=nor:512k(uboot),64k(env),2m(kernel),-(rootfs)"
 #else
 #define MTDIDS_DEFAULT    "nand0=nand"
 #define MTDPARTS_DEFAULT  "mtdparts=nand:16m(uboot),1m(env),-(rootfs)"
@@ -361,7 +361,7 @@
 	"spi_updateuboot=echo Updating uboot from ${serverip}:${image_uboot} ...; " \
 		"tftpboot ${loadaddr} ${image_uboot} && " \
 		"sf probe && sf erase 0 80000 && sf write ${loadaddr} 400 ${filesize}\0"	\
-	"spi_update=echo Updating OS from ${serverip}:${image_os} ...; " \
+	"spi_update=echo Updating OS from ${serverip}:${image_os} to ${spi_koffset} ...; " \
 		"tftp ${loadaddr} ${image_os} && " \
 		"sf probe && sf update ${loadaddr} ${spi_koffset} ${filesize}\0" \
 	\
@@ -369,8 +369,8 @@
 		"if sf probe && sf read ${loadaddr} ${spi_koffset} ${spi_klen}; then " \
 			"echo Booting from FLASH...; " \
 			"setenv bootargs console=${console},${baudrate} " \
-				"root=/dev/mtdblock3 rootfstype=squashfs,jffs2 ${video} ${extra}\0" \
-			"bootm" \
+				"root=/dev/mtdblock3 rootfstype=squashfs,jffs2 ${video} ${extra}; " \
+			"bootm; " \
 		"fi\0"
 #else
 	#define CONFIG_EXTRA_ENV_SETTINGS \
