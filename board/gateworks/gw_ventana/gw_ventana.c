@@ -1698,6 +1698,8 @@ void ft_board_setup(void *blob, bd_t * bd)
 		fdt_del_node_and_alias(blob, "cvbs_in");
 	if (!info->config_nand)
 		fdt_del_node_and_alias(blob, "nand");
+	if (!info->config_gps)
+		fdt_del_node_and_alias(blob, "pps");
 }
 #endif /* defined(CONFIG_OF_FLAT_TREE) && defined(CONFIG_OF_BOARD_SETUP) */
 
