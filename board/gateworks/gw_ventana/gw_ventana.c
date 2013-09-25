@@ -1604,6 +1604,9 @@ void ft_board_setup(void *blob, bd_t * bd)
 	/* board serial number */
 	fdt_setprop(blob, 0, "system-serial", getenv("serial#"), strlen(getenv("serial#") + 1));
 
+	/* board (model contains model from device-tree) */
+	fdt_setprop(blob, 0, "board", info->model, strlen((const char*) info->model) + 1);
+
 	/* Peripheral Config */
 	if (!info->config_eth0)
 		fdt_del_node_and_alias(blob, "ethernet0");
