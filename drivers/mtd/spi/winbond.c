@@ -134,7 +134,11 @@ struct spi_flash *spi_flash_probe_winbond(struct spi_slave *spi, u8 *idcode)
 	}
 
 	flash->page_size = 256;
+#if defined(CONFIG_SPI_FLASH_WINBOND_ERASESIZE)
+	flash->sector_size = CONFIG_SPI_FLASH_WINBOND_ERASESIZE;
+#else
 	flash->sector_size = (idcode[1] == 0x20) ? 65536 : 4096;
+#endif
 	flash->size = 4096 * 16 * params->nr_blocks;
 
 	return flash;
