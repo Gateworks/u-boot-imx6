@@ -72,12 +72,6 @@ DECLARE_GLOBAL_DATA_PTR;
 	PAD_CTL_PUS_100K_DOWN | PAD_CTL_SPEED_MED |		\
 	PAD_CTL_DSE_40ohm     | PAD_CTL_SRE_FAST)
 
-/*
-#define I2C_PAD_CTRL	(PAD_CTL_PKE | PAD_CTL_PUE |		\
-	PAD_CTL_PUS_100K_UP | PAD_CTL_SPEED_MED |		\
-	PAD_CTL_DSE_40ohm | PAD_CTL_HYS |			\
-	PAD_CTL_ODE | PAD_CTL_SRE_FAST)
-*/
 #define I2C_PAD_CTRL  (PAD_CTL_PUS_100K_UP |      \
   PAD_CTL_SPEED_MED | PAD_CTL_DSE_40ohm | PAD_CTL_HYS | \
   PAD_CTL_ODE | PAD_CTL_SRE_FAST)
@@ -98,14 +92,6 @@ iomux_v3_cfg_t const uart2_pads[] = {
 	MX6_PAD_SD4_DAT7__UART2_TXD | MUX_PAD_CTRL(UART_PAD_CTRL),
 	MX6_PAD_SD4_DAT4__UART2_RXD | MUX_PAD_CTRL(UART_PAD_CTRL),
 };
-
-#if 0 // depends on GW5400A vs GW5400B
-/* UART3, GPS */
-iomux_v3_cfg_t const uart3_pads[] = {
-	MX6_PAD_SD4_CMD__UART3_TXD | MUX_PAD_CTRL(UART_PAD_CTRL),
-	MX6_PAD_SD4_CLK__UART3_RXD | MUX_PAD_CTRL(UART_PAD_CTRL),
-};
-#endif
 
 #define PC MUX_PAD_CTRL(I2C_PAD_CTRL)
 
@@ -246,9 +232,6 @@ static void setup_iomux_uart(void)
 {
 	imx_iomux_v3_setup_multiple_pads(uart1_pads, ARRAY_SIZE(uart1_pads));
 	imx_iomux_v3_setup_multiple_pads(uart2_pads, ARRAY_SIZE(uart2_pads));
-#if 0 // depends on GW5400A vs GW5400B
-	imx_iomux_v3_setup_multiple_pads(uart3_pads, ARRAY_SIZE(uart3_pads));
-#endif
 }
 
 #ifdef CONFIG_USB_EHCI_MX6
