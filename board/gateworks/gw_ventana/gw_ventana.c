@@ -644,12 +644,9 @@ static void setup_board_gpio(const char* model)
 
 		gpio_direction_output(IMX_GPIO_NR(1, 2), 1);
 
-		// VIDDEC_EN
-/*
-		//imx_iomux_v3_setup_pad(MX6_PAD_CSI0_DATA_EN__GPIO_5_20 | MUX_PAD_CTRL(NO_PAD_CTRL));
-		imx_iomux_v3_setup_pad(MX6_PAD_CSI0_DATA_EN__GPIO_5_20 | MUX_PAD_CTRL(DIO_PAD_CTRL));
+		// Analog video codec power enable
+		imx_iomux_v3_setup_pad(MX6_PAD_CSI0_DATA_EN__GPIO_5_20 | MUX_PAD_CTRL(NO_PAD_CTRL));
 		gpio_direction_output(IMX_GPIO_NR(5, 20), 1);
-*/
 
 		// Expansion IO0 - PWREN#
 		imx_iomux_v3_setup_pad(MX6_PAD_EIM_A19__GPIO_2_19 | MUX_PAD_CTRL(NO_PAD_CTRL));
@@ -768,6 +765,10 @@ static void setup_board_gpio(const char* model)
 			imx_iomux_v3_setup_pad(MX6_PAD_SD4_DAT0__GPIO_2_8 | MUX_PAD_CTRL(NO_PAD_CTRL));
 			gpio_direction_output(IMX_GPIO_NR(2, 8), (hwconfig("msata"))?1:0);
 			printf("MSATA: %s\n", (hwconfig("msata")?"enabled":"disabled"));
+
+			// Analog video codec power enable
+			imx_iomux_v3_setup_pad(MX6_PAD_EIM_D31__GPIO_3_31 | MUX_PAD_CTRL(NO_PAD_CTRL));
+			gpio_direction_output(IMX_GPIO_NR(3, 31), 1);
 		}
 
 		// UART2_EN#
