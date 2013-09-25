@@ -257,7 +257,7 @@ iomux_v3_cfg_t const usb_pads[] = {
 	MX6_PAD_SD1_DAT0__GPIO_1_16 | MUX_PAD_CTRL(NO_PAD_CTRL),
 
 	/* USBOTG_PWR enable */
-	MX6_PAD_EIM_D22__USBOH3_USBOTG_PWR,
+	MX6_PAD_EIM_D22__USBOH3_USBOTG_PWR | MUX_PAD_CTRL(NO_PAD_CTRL),
 };
 
 int board_ehci_hcd_init(int port)
