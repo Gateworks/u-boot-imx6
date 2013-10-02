@@ -453,6 +453,19 @@ int do_gsc(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 		read_hwmon("VDD_2P5",  0x23, 3, 2500*0.9, 2500*1.1);
 		read_hwmon("VDD_1P8",  0x1d, 3, 1800*0.9, 1800*1.1);
 		read_hwmon("VDD_1P0",  0x20, 3, 1000*0.9, 1000*1.1);
+	} else if ( (strncasecmp((const char*) info->model, "GW52", 4) == 0)) {
+		read_hwmon("Temp",     0x00, 2, 0, 9000);
+		read_hwmon("VIN",      0x02, 3, 8000, 60000);
+		read_hwmon("VDD_3P3",  0x05, 3, 3300*0.9, 3300*1.1);
+		read_hwmon("VBATT",    0x08, 3, 2000*0.9, 3000*1.1);
+		read_hwmon("VDD_CORE", 0x0e, 3, 1175*0.9, 1175*1.1);
+		read_hwmon("VDD_SOC",  0x11, 3, 1175*0.9, 1175*1.1);
+		read_hwmon("VDD_HIGH", 0x14, 3, 3000*0.9, 3000*1.1);
+		read_hwmon("VDD_DDR",  0x17, 3, 1500*0.9, 1500*1.1);
+		read_hwmon("VDD_5P0",  0x0b, 3, 5000*0.9, 5000*1.1);
+		read_hwmon("VDD_2P5",  0x23, 3, 2500*0.9, 2500*1.1);
+		read_hwmon("VDD_1P8",  0x1d, 3, 1800*0.9, 1800*1.1);
+		read_hwmon("VDD_1P0",  0x20, 3, 1000*0.9, 1000*1.1);
 	} else if ( (strncasecmp((const char*) info->model, "GW54", 4) == 0)) {
 		read_hwmon("Temp",     0x00, 2, 0, 9000);
 		read_hwmon("VIN",      0x02, 3, 8000, 60000);
@@ -662,7 +675,6 @@ static void setup_board_gpio(const char* model)
 		if (hwconfig("dio0")) {
 			// Note: no option for DIO0 PWM
 			printf("DIO0:  gpio\n");
-			//imx_iomux_v3_setup_pad(MX6_PAD_SD1_DAT0__GPIO_1_16 | MUX_PAD_CTRL(NO_PAD_CTRL));
 			imx_iomux_v3_setup_pad(MX6_PAD_SD1_DAT0__GPIO_1_16 | MUX_PAD_CTRL(DIO_PAD_CTRL));
 			gpio_direction_input(IMX_GPIO_NR(1, 16));
 		}
@@ -670,7 +682,6 @@ static void setup_board_gpio(const char* model)
 		if (hwconfig("dio1")) {
 			if (hwconfig_subarg_cmp("dio1", "mode", "gpio")) {
 				printf("DIO1:  gpio\n");
-				//imx_iomux_v3_setup_pad(MX6_PAD_SD1_DAT2__GPIO_1_19 | MUX_PAD_CTRL(NO_PAD_CTRL));
 				imx_iomux_v3_setup_pad(MX6_PAD_SD1_DAT2__GPIO_1_19 | MUX_PAD_CTRL(DIO_PAD_CTRL));
 				gpio_direction_input(IMX_GPIO_NR(1, 19));
 			} else if (hwconfig_subarg_cmp("dio1", "mode", "pwm")) {
@@ -682,7 +693,6 @@ static void setup_board_gpio(const char* model)
 		if (hwconfig("dio2")) {
 			if (hwconfig_subarg_cmp("dio2", "mode", "gpio")) {
 				printf("DIO2:  gpio\n");
-				//imx_iomux_v3_setup_pad(MX6_PAD_SD1_DAT1__GPIO_1_17 | MUX_PAD_CTRL(NO_PAD_CTRL));
 				imx_iomux_v3_setup_pad(MX6_PAD_SD1_DAT1__GPIO_1_17 | MUX_PAD_CTRL(DIO_PAD_CTRL));
 				gpio_direction_input(IMX_GPIO_NR(1, 17));
 			} else if (hwconfig_subarg_cmp("dio2", "mode", "pwm")) {
@@ -694,7 +704,6 @@ static void setup_board_gpio(const char* model)
 		if (hwconfig("dio3")) {
 			if (hwconfig_subarg_cmp("dio3", "mode", "gpio")) {
 				printf("DIO3:  gpio\n");
-				//imx_iomux_v3_setup_pad(MX6_PAD_SD1_CMD__GPIO_1_18 | MUX_PAD_CTRL(NO_PAD_CTRL));
 				imx_iomux_v3_setup_pad(MX6_PAD_SD1_CMD__GPIO_1_18 | MUX_PAD_CTRL(DIO_PAD_CTRL));
 				gpio_direction_input(IMX_GPIO_NR(1, 18));
 			} else if (hwconfig_subarg_cmp("dio3", "mode", "pwm")) {
@@ -702,8 +711,92 @@ static void setup_board_gpio(const char* model)
 				imx_iomux_v3_setup_pad(MX6_PAD_SD1_CMD__PWM4_PWMO | MUX_PAD_CTRL(NO_PAD_CTRL));
 			}
 		}
+	} /* end GW51xx */
 
-	}
+	else if (strncasecmp(model, "GW52", 4) == 0) {
+		// PANLEDG#
+		imx_iomux_v3_setup_pad(MX6_PAD_KEY_COL0__GPIO_4_6 | MUX_PAD_CTRL(NO_PAD_CTRL));
+		gpio_direction_output(IMX_GPIO_NR(4, 6), 1);  // grn off
+
+		// PANLEDR#
+		imx_iomux_v3_setup_pad(MX6_PAD_KEY_ROW0__GPIO_4_7 | MUX_PAD_CTRL(NO_PAD_CTRL));
+		gpio_direction_output(IMX_GPIO_NR(4, 7), 1);  // red off
+
+		// MX6_LOCLED#
+		imx_iomux_v3_setup_pad(MX6_PAD_KEY_ROW4__GPIO_4_15 | MUX_PAD_CTRL(NO_PAD_CTRL));
+		gpio_direction_output(IMX_GPIO_NR(4, 15), 1);  // off
+
+		// GPS_SHDN
+		imx_iomux_v3_setup_pad(MX6_PAD_ENET_RXD0__GPIO_1_27 | MUX_PAD_CTRL(NO_PAD_CTRL));
+		gpio_direction_output(IMX_GPIO_NR(1, 27), 1);
+
+		// Expansion IO0 - PWREN#
+		imx_iomux_v3_setup_pad(MX6_PAD_EIM_A19__GPIO_2_19 | MUX_PAD_CTRL(NO_PAD_CTRL));
+		gpio_direction_output(IMX_GPIO_NR(2, 19), 0);
+
+		// Expansion IO1 - IRQ#
+		imx_iomux_v3_setup_pad(MX6_PAD_EIM_A20__GPIO_2_18 | MUX_PAD_CTRL(NO_PAD_CTRL));
+		gpio_direction_input(IMX_GPIO_NR(2, 18));
+
+		/* configure board general purpose IO's based on hwconfig
+		 */
+		// MX6_DIO0
+		if (hwconfig("dio0")) {
+			// Note: no option for DIO0 PWM
+			printf("DIO0:  gpio\n");
+			imx_iomux_v3_setup_pad(MX6_PAD_SD1_DAT0__GPIO_1_16 | MUX_PAD_CTRL(DIO_PAD_CTRL));
+			gpio_direction_input(IMX_GPIO_NR(1, 16));
+		}
+		// MX6_DIO1
+		if (hwconfig("dio1")) {
+			if (hwconfig_subarg_cmp("dio1", "mode", "gpio")) {
+				printf("DIO1:  gpio\n");
+				imx_iomux_v3_setup_pad(MX6_PAD_SD1_DAT2__GPIO_1_19 | MUX_PAD_CTRL(DIO_PAD_CTRL));
+				gpio_direction_input(IMX_GPIO_NR(1, 19));
+			} else if (hwconfig_subarg_cmp("dio1", "mode", "pwm")) {
+				printf("DIO1:  pwm\n");
+				imx_iomux_v3_setup_pad(MX6_PAD_SD1_DAT2__PWM2_PWMO | MUX_PAD_CTRL(NO_PAD_CTRL));
+			}
+		}
+		// MX6_DIO2
+		if (hwconfig("dio2")) {
+			if (hwconfig_subarg_cmp("dio2", "mode", "gpio")) {
+				printf("DIO2:  gpio\n");
+				imx_iomux_v3_setup_pad(MX6_PAD_SD1_DAT1__GPIO_1_17 | MUX_PAD_CTRL(DIO_PAD_CTRL));
+				gpio_direction_input(IMX_GPIO_NR(1, 17));
+			} else if (hwconfig_subarg_cmp("dio2", "mode", "pwm")) {
+				printf("DIO2:  pwm\n");
+				imx_iomux_v3_setup_pad(MX6_PAD_SD1_DAT1__PWM3_PWMO | MUX_PAD_CTRL(NO_PAD_CTRL));
+			}
+		}
+		// MX6_DIO3
+		if (hwconfig("dio3")) {
+			// Note: no option for DIO3 PWM
+			printf("DIO3:  gpio\n");
+			imx_iomux_v3_setup_pad(MX6_PAD_SD1_CLK__GPIO_1_20 | MUX_PAD_CTRL(DIO_PAD_CTRL));
+			gpio_direction_input(IMX_GPIO_NR(1, 20));
+		}
+
+		// MSATA Enable
+		imx_iomux_v3_setup_pad(MX6_PAD_SD4_DAT0__GPIO_2_8 | MUX_PAD_CTRL(NO_PAD_CTRL));
+#if defined(CONFIG_MX6Q)
+		gpio_direction_output(IMX_GPIO_NR(2, 8), (hwconfig("msata"))?1:0);
+		printf("MSATA: %s\n", (hwconfig("msata")?"enabled":"disabled"));
+#else
+		gpio_direction_output(IMX_GPIO_NR(2, 8), 0);
+#endif
+
+		// Analog video codec power enable
+		imx_iomux_v3_setup_pad(MX6_PAD_EIM_D31__GPIO_3_31 | MUX_PAD_CTRL(NO_PAD_CTRL));
+		gpio_direction_output(IMX_GPIO_NR(3, 31), 1);
+
+		// UART2_EN#
+		imx_iomux_v3_setup_pad(MX6_PAD_SD4_DAT3__GPIO_2_11 | MUX_PAD_CTRL(NO_PAD_CTRL));
+		printf("RS232: %s\n", (hwconfig("rs232"))?"enabled":"disabled");
+		gpio_direction_output(IMX_GPIO_NR(2, 11), (hwconfig("rs232"))?0:1);
+		// TODO: flush UART RX FIFO after disable
+	} /* end GW52xx */
+
 	else if (strncasecmp(model, "GW54", 4) == 0) {
 		if (strncasecmp(model, "GW5400-A", 8) == 0) {
 			// PANLEDG#
@@ -763,8 +856,12 @@ static void setup_board_gpio(const char* model)
 
 			// MSATA Enable
 			imx_iomux_v3_setup_pad(MX6_PAD_SD4_DAT0__GPIO_2_8 | MUX_PAD_CTRL(NO_PAD_CTRL));
+#if defined(CONFIG_MX6Q)
 			gpio_direction_output(IMX_GPIO_NR(2, 8), (hwconfig("msata"))?1:0);
 			printf("MSATA: %s\n", (hwconfig("msata")?"enabled":"disabled"));
+#else
+			gpio_direction_output(IMX_GPIO_NR(2, 8), 0);
+#endif
 
 			// Analog video codec power enable
 			imx_iomux_v3_setup_pad(MX6_PAD_EIM_D31__GPIO_3_31 | MUX_PAD_CTRL(NO_PAD_CTRL));
@@ -829,7 +926,7 @@ static void setup_board_gpio(const char* model)
 				imx_iomux_v3_setup_pad(MX6_PAD_SD4_DAT2__PWM4_PWMO | MUX_PAD_CTRL(NO_PAD_CTRL));
 			}
 		}
-	}
+	} /* end GW54xx */
 }
 
 static int setup_pcie(void)
@@ -843,6 +940,13 @@ static int setup_pcie(void)
 		gpio_direction_output(IMX_GPIO_NR(1, 0), 0); // PCIESWT_RST#
 		mdelay(1);
 		gpio_direction_output(IMX_GPIO_NR(1, 0), 1); // PCIESWT_RST#
+
+	} else if ( (strncasecmp((const char*) info->model, "GW52", 4) == 0)) {
+		/* toggle PCI_RST# */
+		imx_iomux_v3_setup_pad(MX6_PAD_ENET_TXD1__GPIO_1_29 | MUX_PAD_CTRL(NO_PAD_CTRL));
+		gpio_direction_output(IMX_GPIO_NR(1, 29), 0); // PCIESWT_RST#
+		mdelay(1);
+		gpio_direction_output(IMX_GPIO_NR(1, 29), 1); // PCIESWT_RST#
 
 	} else if ( (strncasecmp((const char*) info->model, "GW54", 4) == 0)) {
 		/* disable spread-spectrum clock: kernel hang when enabled - not clear why */
