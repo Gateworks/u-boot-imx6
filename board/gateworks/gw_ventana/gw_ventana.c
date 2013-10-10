@@ -786,6 +786,10 @@ static void setup_board_gpio(const char* model)
 		gpio_direction_output(IMX_GPIO_NR(2, 8), 0);
 #endif
 
+		// USBOTG Select (PCISKT or FrontPanel)
+		imx_iomux_v3_setup_pad(MX6_PAD_GPIO_2__GPIO_1_2 | MUX_PAD_CTRL(NO_PAD_CTRL));
+		gpio_direction_output(IMX_GPIO_NR(1, 2), 0);
+
 		// Analog video codec power enable
 		imx_iomux_v3_setup_pad(MX6_PAD_EIM_D31__GPIO_3_31 | MUX_PAD_CTRL(NO_PAD_CTRL));
 		gpio_direction_output(IMX_GPIO_NR(3, 31), 1);
