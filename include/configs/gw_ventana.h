@@ -125,12 +125,9 @@
 #define CONFIG_DOS_PARTITION
 
 /* Network config - Allow larger/faster download for TFTP/NFS */
-/* this causes TFTP to fail completely - perhaps driver is not fragmenting
- * packets properly?
 #define CONFIG_IP_DEFRAG
 #define CONFIG_TFTP_BLOCKSIZE 4096
 #define CONFIG_NFS_READ_SIZE  4096
-*/
 
 #ifdef CONFIG_MX6Q
 #define CONFIG_CMD_SATA
