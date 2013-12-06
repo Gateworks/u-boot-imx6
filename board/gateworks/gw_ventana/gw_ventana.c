@@ -1035,37 +1035,25 @@ static int setup_pcie(void)
 	struct ventana_board_info *info = &ventana_info;
 
 	if ( (strncasecmp((const char*) info->model, "GW51", 4) == 0)) {
-
-		/* toggle PCI_RST# */
+		/* assert PCI_RST# (will be released by OS when clock is valid) */
 		imx_iomux_v3_setup_pad(MX6_PAD_GPIO_0__GPIO_1_0 | MUX_PAD_CTRL(NO_PAD_CTRL));
-		gpio_direction_output(IMX_GPIO_NR(1, 0), 0); // PCIESWT_RST#
-		mdelay(1);
-		gpio_direction_output(IMX_GPIO_NR(1, 0), 1); // PCIESWT_RST#
-
+		gpio_direction_output(IMX_GPIO_NR(1, 0), 0);
 	} else if ( (strncasecmp((const char*) info->model, "GW52", 4) == 0)) {
-		/* toggle PCI_RST# */
+		/* assert PCI_RST# (will be released by OS when clock is valid) */
 		imx_iomux_v3_setup_pad(MX6_PAD_ENET_TXD1__GPIO_1_29 | MUX_PAD_CTRL(NO_PAD_CTRL));
-		gpio_direction_output(IMX_GPIO_NR(1, 29), 0); // PCIESWT_RST#
-		mdelay(1);
-		gpio_direction_output(IMX_GPIO_NR(1, 29), 1); // PCIESWT_RST#
-
+		gpio_direction_output(IMX_GPIO_NR(1, 29), 0);
 	} else if ( (strncasecmp((const char*) info->model, "GW53", 4) == 0)) {
-		/* toggle PCI_RST# */
+		/* assert PCI_RST# (will be released by OS when clock is valid) */
 		imx_iomux_v3_setup_pad(MX6_PAD_ENET_TXD1__GPIO_1_29 | MUX_PAD_CTRL(NO_PAD_CTRL));
-		gpio_direction_output(IMX_GPIO_NR(1, 29), 0); // PCIESWT_RST#
-		mdelay(1);
-		gpio_direction_output(IMX_GPIO_NR(1, 29), 1); // PCIESWT_RST#
-
+		gpio_direction_output(IMX_GPIO_NR(1, 29), 0);
 	} else if ( (strncasecmp((const char*) info->model, "GW54", 4) == 0)) {
 		/* disable spread-spectrum clock: kernel hang when enabled - not clear why */
 		imx_iomux_v3_setup_pad(MX6_PAD_SD1_CLK__GPIO_1_20 | MUX_PAD_CTRL(NO_PAD_CTRL));
 		gpio_direction_output(IMX_GPIO_NR(1, 20), 0); // PCIECK_SSON
 
-		/* toggle PCI_RST# */
+		/* assert PCI_RST# (will be released by OS when clock is valid) */
 		imx_iomux_v3_setup_pad(MX6_PAD_ENET_TXD1__GPIO_1_29 | MUX_PAD_CTRL(NO_PAD_CTRL));
-		gpio_direction_output(IMX_GPIO_NR(1, 29), 0); // PCIESWT_RST#
-		mdelay(1);
-		gpio_direction_output(IMX_GPIO_NR(1, 29), 1); // PCIESWT_RST#
+		gpio_direction_output(IMX_GPIO_NR(1, 29), 0);
 	}
 
 	return 0;
