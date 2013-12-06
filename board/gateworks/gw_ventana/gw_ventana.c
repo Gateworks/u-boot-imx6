@@ -1768,18 +1768,18 @@ void ft_board_setup(void *blob, bd_t * bd)
 		return;
 	}
 
-  if (!model) {
-		printf("invalid board info: Leaving FDT fully enabled\n");
-		return;
-	}
-
 	/* MTD partitions
 	 * Update partition nodes using info from mtdparts env var
 	 */
 	printf("   Updating MTD partitions...\n");
 	fdt_fixup_mtdparts(blob, nodes, ARRAY_SIZE(nodes));
 
+	if (!model) {
+		printf("invalid board info: Leaving FDT fully enabled\n");
+		return;
+	}
 	printf("   Adjusting FDT per EEPROM for %s...\n", model);
+
 	/* Note that fdt_fixup_ethernet is called in arm/lib/bootm before this
 	 * which sets mac-address and local-mac-address properties of
 	 * ethernet<n> aliases to ethaddr...eth<n>addr env
