@@ -452,7 +452,6 @@ int do_gsc(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 		read_hwmon("VDD_5P0",  0x0b, 3, 5000*0.9, 5000*1.1);
 		read_hwmon("VDD_2P5",  0x23, 3, 2500*0.9, 2500*1.1);
 		read_hwmon("VDD_1P8",  0x1d, 3, 1800*0.9, 1800*1.1);
-		read_hwmon("VDD_1P0",  0x20, 3, 1000*0.9, 1000*1.1);
 	} else if ( (strncasecmp((const char*) info->model, "GW52", 4) == 0)) {
 		read_hwmon("Temp",     0x00, 2, 0, 9000);
 		read_hwmon("VIN",      0x02, 3, 8000, 60000);
