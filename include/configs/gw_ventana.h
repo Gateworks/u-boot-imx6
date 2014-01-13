@@ -296,6 +296,7 @@
 
 #define CONFIG_EXTRA_ENV_SETTINGS_COMMON \
 	"console=ttymxc1\0" \
+	"bootdevs=usb mmc sata flash\0" \
 	"hwconfig=rs232;" \
 		"dio0:mode=gpio;dio1:mode=gpio;dio2:mode=gpio;dio3:mode=gpio\0" \
 	"video=\0" \
@@ -326,7 +327,7 @@
 		"setenv fsload 'ext2load mmc 0:1'; " \
 		"mmc dev 0 && mmc rescan && " \
 		"run loadscript; " \
-		"if ${fsload} ${loadaddr} ${uimage} && echo 'Booting from mmc...'; then " \
+		"if ${fsload} ${loadaddr} ${uimage}; then " \
 			"setenv bootargs console=${console},${baudrate} " \
 				"root=/dev/mmcblk0p1 rootfstype=ext4 rootwait rw ${video} ${extra}; " \
 			"if run loadfdt && fdt addr ${fdt_addr}; then " \
@@ -339,7 +340,7 @@
 	"sata_boot=" \
 		"setenv fsload 'ext2load sata 0:1'; sata init && " \
 		"run loadscript; " \
-		"if ${fsload} ${loadaddr} ${uimage} && echo 'Booting from SATA...'; then " \
+		"if ${fsload} ${loadaddr} ${uimage}; then " \
 			"setenv bootargs console=${console},${baudrate} " \
 				"root=/dev/sda1 rootfstype=ext4 rootwait rw ${video} ${extra}; " \
 			"if run loadfdt && fdt addr ${fdt_addr}; then " \
@@ -351,7 +352,7 @@
 	"usb_boot=" \
 		"setenv fsload 'ext2load usb 0:1'; usb start && usb dev 0 && " \
 		"run loadscript; " \
-		"if ${fsload} ${loadaddr} ${uimage} && echo 'Booting from USB...'; then " \
+		"if ${fsload} ${loadaddr} ${uimage}; then " \
 			"setenv bootargs console=${console},${baudrate} " \
 				"root=/dev/sda1 rootfstype=ext4 rootwait rw ${video} ${extra}; " \
 			"if run loadfdt && fdt addr ${fdt_addr}; then " \
@@ -379,7 +380,6 @@
 	\
 	"flash_boot=" \
 		"if sf probe && sf read ${loadaddr} ${spi_koffset} ${spi_klen}; then " \
-			"echo Booting from FLASH...; " \
 			"setenv bootargs console=${console},${baudrate} " \
 				"root=/dev/mtdblock3 rootfstype=squashfs,jffs2 ${video} ${extra}; " \
 			"bootm; " \
@@ -398,7 +398,7 @@
 		"setenv fsload 'ubifsload'; " \
 		"ubi part rootfs && ubifsmount ubi0:rootfs; " \
 		"run loadscript; " \
-		"if ${fsload} ${loadaddr} ${uimage}; then echo Booting from FLASH...; " \
+		"if ${fsload} ${loadaddr} ${uimage}; then " \
 			"setenv bootargs console=${console},${baudrate} " \
 				"root=ubi0:rootfs ubi.mtd=2 rootfstype=ubifs ${video} ${extra}; " \
 			"if run loadfdt && fdt addr ${fdt_addr}; then " \
@@ -410,11 +410,10 @@
 #endif
 
 #define CONFIG_BOOTCOMMAND \
-	"if run usb_boot; then; " \
-	"elif run mmc_boot; then; " \
-	"elif run sata_boot; then; " \
-	"else run flash_boot; " \
-	"fi"
+	"for dtype in ${bootdevs}; do " \
+		"echo; echo Attempting ${dtype} boot...; " \
+		"if run ${dtype}_boot; then; fi; " \
+	"done"
 
 /* Device Tree Support */
 #define CONFIG_OF_BOARD_SETUP
