@@ -212,7 +212,7 @@
 #define CONFIG_SYS_LONGHELP
 #define CONFIG_SYS_HUSH_PARSER
 #define CONFIG_SYS_PROMPT	             "Ventana > "
-#define CONFIG_SYS_CBSIZE	             512
+#define CONFIG_SYS_CBSIZE	             1024
 #define CONFIG_AUTO_COMPLETE
 #define CONFIG_CMDLINE_EDITING
 #define CONFIG_HWCONFIG
