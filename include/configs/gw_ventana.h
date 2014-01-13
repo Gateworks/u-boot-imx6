@@ -372,7 +372,7 @@
 #else
 	#define CONFIG_EXTRA_ENV_SETTINGS \
 	CONFIG_EXTRA_ENV_SETTINGS_COMMON \
-	"image_rootfs=openwrt-imx6-root.ubi\0" \
+	"image_rootfs=openwrt-imx6-ventana-rootfs.ubi\0" \
 	\
 	"nand_update=echo Updating NAND from ${serverip}:${image_rootfs} ...; " \
 		"tftp ${loadaddr} ${image_rootfs} && " \
