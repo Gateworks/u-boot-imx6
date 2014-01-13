@@ -326,7 +326,7 @@
 		"if ${fsload} ${loadaddr} ${uimage} && echo 'Booting from mmc...'; then " \
 			"setenv bootargs console=${console},${baudrate} " \
 				"root=/dev/mmcblk0p1 rootfstype=ext4 rootwait rw ${video} ${extra}; " \
-			"if run loadfdt && fdt addr ${fdt_addr} && fdt boardsetup; then " \
+			"if run loadfdt && fdt addr ${fdt_addr}; then " \
 				"bootm ${loadaddr} - ${fdt_addr}; " \
 			"else " \
 				"bootm; " \
@@ -339,7 +339,7 @@
 		"if ${fsload} ${loadaddr} ${uimage} && echo 'Booting from USB...'; then " \
 			"setenv bootargs console=${console},${baudrate} " \
 				"root=/dev/sda1 rootfstype=ext4 rootwait rw ${video} ${extra}; " \
-			"if run loadfdt && fdt addr ${fdt_addr} && fdt boardsetup; then " \
+			"if run loadfdt && fdt addr ${fdt_addr}; then " \
 				"bootm ${loadaddr} - ${fdt_addr}; " \
 			"else " \
 				"bootm; " \
@@ -386,7 +386,7 @@
 		"if ${fsload} ${loadaddr} ${uimage}; then echo Booting from FLASH...; " \
 			"setenv bootargs console=${console},${baudrate} " \
 				"root=ubi0:rootfs ubi.mtd=2 rootfstype=ubifs ${video} ${extra}; " \
-			"if run loadfdt && fdt addr ${fdt_addr} && fdt boardsetup; then " \
+			"if run loadfdt && fdt addr ${fdt_addr}; then " \
 				"ubifsumount; bootm ${loadaddr} - ${fdt_addr}; " \
 			"else " \
 				"ubifsumount; bootm; " \
