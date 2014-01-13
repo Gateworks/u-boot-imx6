@@ -336,6 +336,18 @@
 			"fi; " \
 		"fi\0" \
 	\
+	"sata_boot=" \
+		"setenv fsload 'ext2load sata 0:1'; sata init && " \
+		"run loadscript; " \
+		"if ${fsload} ${loadaddr} ${uimage} && echo 'Booting from SATA...'; then " \
+			"setenv bootargs console=${console},${baudrate} " \
+				"root=/dev/sda1 rootfstype=ext4 rootwait rw ${video} ${extra}; " \
+			"if run loadfdt && fdt addr ${fdt_addr}; then " \
+				"bootm ${loadaddr} - ${fdt_addr}; " \
+			"else " \
+				"bootm; " \
+			"fi; " \
+		"fi\0" \
 	"usb_boot=" \
 		"setenv fsload 'ext2load usb 0:1'; usb start && usb dev 0 && " \
 		"run loadscript; " \
@@ -400,6 +412,7 @@
 #define CONFIG_BOOTCOMMAND \
 	"if run usb_boot; then; " \
 	"elif run mmc_boot; then; " \
+	"elif run sata_boot; then; " \
 	"else run flash_boot; " \
 	"fi"
 
