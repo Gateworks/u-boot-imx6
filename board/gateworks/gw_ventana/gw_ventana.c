@@ -655,7 +655,68 @@ int board_eth_init(bd_t *bis)
 
 static void setup_board_gpio(const char* model)
 {
+	const char* s;
+	char arg[10];
+	size_t len;
+	enum {
+		GW51xx,
+		GW52xx,
+		GW53xx,
+		GW54xx,
+		UNKNOWN,
+	};
+	struct dio_cfg {
+		iomux_v3_cfg_t gpio_padmux;
+		unsigned gpio_param;
+		iomux_v3_cfg_t pwm_padmux;
+		unsigned pwm_param;
+	};
+	int board_type = UNKNOWN;
+	struct dio_cfg dio_cfg[] = {
+		/* GW51xx */
+		{ MX6_PAD_SD1_DAT0__GPIO_1_16, IMX_GPIO_NR(1, 16),
+			0, 0 },
+		{ MX6_PAD_SD1_DAT2__GPIO_1_19, IMX_GPIO_NR(1, 19),
+			MX6_PAD_SD1_DAT2__PWM2_PWMO, 2 },
+		{ MX6_PAD_SD1_DAT1__GPIO_1_17, IMX_GPIO_NR(1, 17),
+			MX6_PAD_SD1_DAT1__PWM3_PWMO, 3 },
+		{ MX6_PAD_SD1_CMD__GPIO_1_18, IMX_GPIO_NR(1, 18),
+			MX6_PAD_SD1_CMD__PWM4_PWMO, 4 },
+
+		/* GW52xx */
+		{ MX6_PAD_SD1_DAT0__GPIO_1_16, IMX_GPIO_NR(1, 16),
+			0, 0 },
+		{ MX6_PAD_SD1_DAT2__GPIO_1_19, IMX_GPIO_NR(1, 19),
+			MX6_PAD_SD1_DAT2__PWM2_PWMO, 2 },
+		{ MX6_PAD_SD1_DAT1__GPIO_1_17, IMX_GPIO_NR(1, 17),
+			MX6_PAD_SD1_DAT1__PWM3_PWMO, 3 },
+		{ MX6_PAD_SD1_CLK__GPIO_1_20, IMX_GPIO_NR(1, 20),
+			0, 0 },
+
+		/* GW53xx */
+		{ MX6_PAD_SD1_DAT0__GPIO_1_16, IMX_GPIO_NR(1, 16),
+			0, 0 },
+		{ MX6_PAD_SD1_DAT2__GPIO_1_19, IMX_GPIO_NR(1, 19),
+			MX6_PAD_SD1_DAT2__PWM2_PWMO, 2 },
+		{ MX6_PAD_SD1_DAT1__GPIO_1_17, IMX_GPIO_NR(1, 17),
+			MX6_PAD_SD1_DAT1__PWM3_PWMO, 3 },
+		{ MX6_PAD_SD1_CLK__GPIO_1_20, IMX_GPIO_NR(1, 20),
+			0, 0 },
+
+		/* GW54xx */
+		{ MX6_PAD_GPIO_9__GPIO_1_9, IMX_GPIO_NR(1, 9),
+			MX6_PAD_GPIO_9__PWM1_PWMO, 1 },
+		{ MX6_PAD_SD1_DAT2__GPIO_1_19, IMX_GPIO_NR(1, 19),
+			MX6_PAD_SD1_DAT2__PWM2_PWMO, 2 },
+		{ MX6_PAD_SD4_DAT1__GPIO_2_9, IMX_GPIO_NR(2, 9),
+			MX6_PAD_SD4_DAT1__PWM3_PWMO, 3 },
+		{ MX6_PAD_SD4_DAT2__GPIO_2_10, IMX_GPIO_NR(2, 10),
+			MX6_PAD_SD4_DAT2__PWM4_PWMO, 4 },
+	};
+
 	if (strncasecmp(model, "GW51", 4) == 0) {
+		board_type = GW51xx;
+
 		// PANLEDG#
 		imx_iomux_v3_setup_pad(MX6_PAD_KEY_COL0__GPIO_4_6 | MUX_PAD_CTRL(NO_PAD_CTRL));
 		gpio_direction_output(IMX_GPIO_NR(4, 6), 1);  // grn off
@@ -680,52 +741,11 @@ static void setup_board_gpio(const char* model)
 		// Expansion IO1 - IRQ#
 		imx_iomux_v3_setup_pad(MX6_PAD_EIM_A20__GPIO_2_18 | MUX_PAD_CTRL(NO_PAD_CTRL));
 		gpio_direction_input(IMX_GPIO_NR(2, 18));
-
-		/* configure board general purpose IO's based on hwconfig
-		 */
-		// MX6_DIO0
-		if (hwconfig("dio0")) {
-			// Note: no option for DIO0 PWM
-			printf("DIO0:  gpio\n");
-			imx_iomux_v3_setup_pad(MX6_PAD_SD1_DAT0__GPIO_1_16 | MUX_PAD_CTRL(DIO_PAD_CTRL));
-			gpio_direction_input(IMX_GPIO_NR(1, 16));
-		}
-		// MX6_DIO1
-		if (hwconfig("dio1")) {
-			if (hwconfig_subarg_cmp("dio1", "mode", "gpio")) {
-				printf("DIO1:  gpio\n");
-				imx_iomux_v3_setup_pad(MX6_PAD_SD1_DAT2__GPIO_1_19 | MUX_PAD_CTRL(DIO_PAD_CTRL));
-				gpio_direction_input(IMX_GPIO_NR(1, 19));
-			} else if (hwconfig_subarg_cmp("dio1", "mode", "pwm")) {
-				printf("DIO1:  pwm\n");
-				imx_iomux_v3_setup_pad(MX6_PAD_SD1_DAT2__PWM2_PWMO | MUX_PAD_CTRL(NO_PAD_CTRL));
-			}
-		}
-		// MX6_DIO2
-		if (hwconfig("dio2")) {
-			if (hwconfig_subarg_cmp("dio2", "mode", "gpio")) {
-				printf("DIO2:  gpio\n");
-				imx_iomux_v3_setup_pad(MX6_PAD_SD1_DAT1__GPIO_1_17 | MUX_PAD_CTRL(DIO_PAD_CTRL));
-				gpio_direction_input(IMX_GPIO_NR(1, 17));
-			} else if (hwconfig_subarg_cmp("dio2", "mode", "pwm")) {
-				printf("DIO2:  pwm\n");
-				imx_iomux_v3_setup_pad(MX6_PAD_SD1_DAT1__PWM3_PWMO | MUX_PAD_CTRL(NO_PAD_CTRL));
-			}
-		}
-		// MX6_DIO3
-		if (hwconfig("dio3")) {
-			if (hwconfig_subarg_cmp("dio3", "mode", "gpio")) {
-				printf("DIO3:  gpio\n");
-				imx_iomux_v3_setup_pad(MX6_PAD_SD1_CMD__GPIO_1_18 | MUX_PAD_CTRL(DIO_PAD_CTRL));
-				gpio_direction_input(IMX_GPIO_NR(1, 18));
-			} else if (hwconfig_subarg_cmp("dio3", "mode", "pwm")) {
-				printf("DIO3:  pwm\n");
-				imx_iomux_v3_setup_pad(MX6_PAD_SD1_CMD__PWM4_PWMO | MUX_PAD_CTRL(NO_PAD_CTRL));
-			}
-		}
 	} /* end GW51xx */
 
 	else if (strncasecmp(model, "GW52", 4) == 0) {
+		board_type = GW52xx;
+
 		// PANLEDG#
 		imx_iomux_v3_setup_pad(MX6_PAD_KEY_COL0__GPIO_4_6 | MUX_PAD_CTRL(NO_PAD_CTRL));
 		gpio_direction_output(IMX_GPIO_NR(4, 6), 1);  // grn off
@@ -749,45 +769,6 @@ static void setup_board_gpio(const char* model)
 		// Expansion IO1 - IRQ#
 		imx_iomux_v3_setup_pad(MX6_PAD_EIM_A20__GPIO_2_18 | MUX_PAD_CTRL(NO_PAD_CTRL));
 		gpio_direction_input(IMX_GPIO_NR(2, 18));
-
-		/* configure board general purpose IO's based on hwconfig
-		 */
-		// MX6_DIO0
-		if (hwconfig("dio0")) {
-			// Note: no option for DIO0 PWM
-			printf("DIO0:  gpio\n");
-			imx_iomux_v3_setup_pad(MX6_PAD_SD1_DAT0__GPIO_1_16 | MUX_PAD_CTRL(DIO_PAD_CTRL));
-			gpio_direction_input(IMX_GPIO_NR(1, 16));
-		}
-		// MX6_DIO1
-		if (hwconfig("dio1")) {
-			if (hwconfig_subarg_cmp("dio1", "mode", "gpio")) {
-				printf("DIO1:  gpio\n");
-				imx_iomux_v3_setup_pad(MX6_PAD_SD1_DAT2__GPIO_1_19 | MUX_PAD_CTRL(DIO_PAD_CTRL));
-				gpio_direction_input(IMX_GPIO_NR(1, 19));
-			} else if (hwconfig_subarg_cmp("dio1", "mode", "pwm")) {
-				printf("DIO1:  pwm\n");
-				imx_iomux_v3_setup_pad(MX6_PAD_SD1_DAT2__PWM2_PWMO | MUX_PAD_CTRL(NO_PAD_CTRL));
-			}
-		}
-		// MX6_DIO2
-		if (hwconfig("dio2")) {
-			if (hwconfig_subarg_cmp("dio2", "mode", "gpio")) {
-				printf("DIO2:  gpio\n");
-				imx_iomux_v3_setup_pad(MX6_PAD_SD1_DAT1__GPIO_1_17 | MUX_PAD_CTRL(DIO_PAD_CTRL));
-				gpio_direction_input(IMX_GPIO_NR(1, 17));
-			} else if (hwconfig_subarg_cmp("dio2", "mode", "pwm")) {
-				printf("DIO2:  pwm\n");
-				imx_iomux_v3_setup_pad(MX6_PAD_SD1_DAT1__PWM3_PWMO | MUX_PAD_CTRL(NO_PAD_CTRL));
-			}
-		}
-		// MX6_DIO3
-		if (hwconfig("dio3")) {
-			// Note: no option for DIO3 PWM
-			printf("DIO3:  gpio\n");
-			imx_iomux_v3_setup_pad(MX6_PAD_SD1_CLK__GPIO_1_20 | MUX_PAD_CTRL(DIO_PAD_CTRL));
-			gpio_direction_input(IMX_GPIO_NR(1, 20));
-		}
 
 		// MSATA Enable
 		imx_iomux_v3_setup_pad(MX6_PAD_SD4_DAT0__GPIO_2_8 | MUX_PAD_CTRL(NO_PAD_CTRL));
@@ -814,6 +795,8 @@ static void setup_board_gpio(const char* model)
 	} /* end GW52xx */
 
 	else if (strncasecmp(model, "GW53", 4) == 0) {
+		board_type = GW53xx;
+
 		// PANLEDG#
 		imx_iomux_v3_setup_pad(MX6_PAD_KEY_COL0__GPIO_4_6 | MUX_PAD_CTRL(NO_PAD_CTRL));
 		gpio_direction_output(IMX_GPIO_NR(4, 6), 1);  // grn off
@@ -838,45 +821,6 @@ static void setup_board_gpio(const char* model)
 		imx_iomux_v3_setup_pad(MX6_PAD_EIM_A20__GPIO_2_18 | MUX_PAD_CTRL(NO_PAD_CTRL));
 		gpio_direction_input(IMX_GPIO_NR(2, 18));
 
-		/* configure board general purpose IO's based on hwconfig
-		 */
-		// MX6_DIO0
-		if (hwconfig("dio0")) {
-			// Note: no option for DIO0 PWM
-			printf("DIO0:  gpio\n");
-			imx_iomux_v3_setup_pad(MX6_PAD_SD1_DAT0__GPIO_1_16 | MUX_PAD_CTRL(DIO_PAD_CTRL));
-			gpio_direction_input(IMX_GPIO_NR(1, 16));
-		}
-		// MX6_DIO1
-		if (hwconfig("dio1")) {
-			if (hwconfig_subarg_cmp("dio1", "mode", "gpio")) {
-				printf("DIO1:  gpio\n");
-				imx_iomux_v3_setup_pad(MX6_PAD_SD1_DAT2__GPIO_1_19 | MUX_PAD_CTRL(DIO_PAD_CTRL));
-				gpio_direction_input(IMX_GPIO_NR(1, 19));
-			} else if (hwconfig_subarg_cmp("dio1", "mode", "pwm")) {
-				printf("DIO1:  pwm\n");
-				imx_iomux_v3_setup_pad(MX6_PAD_SD1_DAT2__PWM2_PWMO | MUX_PAD_CTRL(NO_PAD_CTRL));
-			}
-		}
-		// MX6_DIO2
-		if (hwconfig("dio2")) {
-			if (hwconfig_subarg_cmp("dio2", "mode", "gpio")) {
-				printf("DIO2:  gpio\n");
-				imx_iomux_v3_setup_pad(MX6_PAD_SD1_DAT1__GPIO_1_17 | MUX_PAD_CTRL(DIO_PAD_CTRL));
-				gpio_direction_input(IMX_GPIO_NR(1, 17));
-			} else if (hwconfig_subarg_cmp("dio2", "mode", "pwm")) {
-				printf("DIO2:  pwm\n");
-				imx_iomux_v3_setup_pad(MX6_PAD_SD1_DAT1__PWM3_PWMO | MUX_PAD_CTRL(NO_PAD_CTRL));
-			}
-		}
-		// MX6_DIO3
-		if (hwconfig("dio3")) {
-			// Note: no option for DIO3 PWM
-			printf("DIO3:  gpio\n");
-			imx_iomux_v3_setup_pad(MX6_PAD_SD1_CLK__GPIO_1_20 | MUX_PAD_CTRL(DIO_PAD_CTRL));
-			gpio_direction_input(IMX_GPIO_NR(1, 20));
-		}
-
 		// MSATA Enable
 		imx_iomux_v3_setup_pad(MX6_PAD_SD4_DAT0__GPIO_2_8 | MUX_PAD_CTRL(NO_PAD_CTRL));
 #if defined(CONFIG_MX6Q)
@@ -898,6 +842,7 @@ static void setup_board_gpio(const char* model)
 	} /* end GW53xx */
 
 	else if (strncasecmp(model, "GW54", 4) == 0) {
+		board_type = GW54xx;
 		if (strncasecmp(model, "GW5400-A", 8) == 0) {
 			// PANLEDG#
 			imx_iomux_v3_setup_pad(MX6_PAD_KEY_COL0__GPIO_4_6 | MUX_PAD_CTRL(NO_PAD_CTRL));
@@ -977,56 +922,38 @@ static void setup_board_gpio(const char* model)
 		// DIOI2C_DIS#
 		imx_iomux_v3_setup_pad(MX6_PAD_GPIO_19__GPIO_4_5 | MUX_PAD_CTRL(NO_PAD_CTRL));
 		gpio_direction_output(IMX_GPIO_NR(4,  5), 0);
-
-		/* configure board general purpose IO's based on hwconfig
-		 */
-		// MX6_DIO0
-		if (hwconfig("dio0")) {
-			if (hwconfig_subarg_cmp("dio0", "mode", "gpio")) {
-				printf("DIO0:  gpio\n");
-				imx_iomux_v3_setup_pad(MX6_PAD_GPIO_9__GPIO_1_9 | MUX_PAD_CTRL(NO_PAD_CTRL));
-				gpio_direction_input(IMX_GPIO_NR(1, 9));
-			} else if (hwconfig_subarg_cmp("dio0", "mode", "pwm")) {
-				printf("DIO0:  pwm\n");
-				imx_iomux_v3_setup_pad(MX6_PAD_GPIO_9__PWM1_PWMO | MUX_PAD_CTRL(NO_PAD_CTRL));
-			}
-		}
-		// MX6_DIO1
-#ifdef CONFIG_MX6Q
-		if (hwconfig("dio1")) {
-			if (hwconfig_subarg_cmp("dio1", "mode", "gpio")) {
-				printf("DIO1:  gpio\n");
-				imx_iomux_v3_setup_pad(MX6_PAD_SD1_DAT2__GPIO_1_19 | MUX_PAD_CTRL(NO_PAD_CTRL));
-				gpio_direction_input(IMX_GPIO_NR(1, 19));
-			} else if (hwconfig_subarg_cmp("dio1", "mode", "pwm")) {
-				printf("DIO1:  pwm\n");
-				imx_iomux_v3_setup_pad(MX6_PAD_SD1_DAT2__PWM2_PWMO | MUX_PAD_CTRL(NO_PAD_CTRL));
-			}
-		}
-#endif
-		// MX6_DIO2
-		if (hwconfig("dio2")) {
-			if (hwconfig_subarg_cmp("dio2", "mode", "gpio")) {
-				printf("DIO2:  gpio\n");
-				imx_iomux_v3_setup_pad(MX6_PAD_SD4_DAT1__GPIO_2_9 | MUX_PAD_CTRL(NO_PAD_CTRL));
-				gpio_direction_input(IMX_GPIO_NR(2, 9));
-			} else if (hwconfig_subarg_cmp("dio2", "mode", "pwm")) {
-				printf("DIO2:  pwm\n");
-				imx_iomux_v3_setup_pad(MX6_PAD_SD4_DAT1__PWM3_PWMO | MUX_PAD_CTRL(NO_PAD_CTRL));
-			}
-		}
-		// MX6_DIO3
-		if (hwconfig("dio3")) {
-			if (hwconfig_subarg_cmp("dio3", "mode", "gpio")) {
-				printf("DIO3:  gpio\n");
-				imx_iomux_v3_setup_pad(MX6_PAD_SD4_DAT2__GPIO_2_10 | MUX_PAD_CTRL(NO_PAD_CTRL));
-				gpio_direction_input(IMX_GPIO_NR(2, 10));
-			} else if (hwconfig_subarg_cmp("dio3", "mode", "pwm")) {
-				printf("DIO3:  pwm\n");
-				imx_iomux_v3_setup_pad(MX6_PAD_SD4_DAT2__PWM4_PWMO | MUX_PAD_CTRL(NO_PAD_CTRL));
-			}
-		}
 	} /* end GW54xx */
+
+	/* Configure DIO pinmux/padctl registers
+	 * see IMX6DQRM/IMX6SDLRM IOMUXC_SW_PAD_CTL_PAD_* register definitions
+	 */
+	if (board_type < UNKNOWN) {
+		int i;
+		for (i = 0; i < 4; i++) {
+			struct dio_cfg *cfg = &dio_cfg[(4*board_type)+i];
+			unsigned ctrl = DIO_PAD_CTRL;
+
+			sprintf(arg, "dio%d", i);
+			if (hwconfig(arg)) {
+				s = hwconfig_subarg(arg, "padctrl", &len);
+				if (s)
+					ctrl = simple_strtoul(s, NULL, 16) & 0x3ffff;
+				if (hwconfig_subarg_cmp(arg, "mode", "gpio")) {
+					printf("DIO%d:  GPIO%d_IO%02d (gpio-%d)\n", i,
+						(cfg->gpio_param/32)+1,
+						cfg->gpio_param%32,
+						cfg->gpio_param);
+					imx_iomux_v3_setup_pad(cfg->gpio_padmux | MUX_PAD_CTRL(ctrl));
+					gpio_direction_input(cfg->gpio_param);
+				} else if (hwconfig_subarg_cmp("dio2", "mode", "pwm")
+				        && cfg->pwm_padmux)
+				{
+					printf("DIO%d:  pwm%d\n", i, cfg->pwm_param);
+					imx_iomux_v3_setup_pad(cfg->pwm_padmux | MUX_PAD_CTRL(ctrl));
+				}
+			}
+		}
+	}
 }
 
 static int setup_pcie(void)
