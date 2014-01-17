@@ -160,10 +160,66 @@ unsigned long usb_stor_write(int device, lbaint_t blknr,
 struct usb_device * usb_get_dev_index(int index);
 void uhci_show_temp_int_td(void);
 
+struct usb_device *get_usb_dev(int index)
+{
+	struct usb_device *dev;
+	int i;
+
+	dev = NULL;
+	for (i = 0; i < USB_MAX_DEVICE; i++) {
+		dev = usb_get_dev_index(i);
+		if (dev == NULL)
+			return NULL;
+		if (dev->devnum == usb_dev_desc[index].target)
+			break;
+	}
+
+	return dev;
+}
+
 #ifdef CONFIG_PARTITIONS
 block_dev_desc_t *usb_stor_get_dev(int index)
 {
-	return (index < usb_max_devs) ? &usb_dev_desc[index] : NULL;
+	block_dev_desc_t *ret;
+
+	ret = (index < usb_max_devs) ? &usb_dev_desc[index] : NULL;
+	if (ret) {
+		int port = -1;
+		struct usb_device *dev = get_usb_dev(index);
+
+		if (dev && dev->parent) {
+			/* dev->devnum is device number on USB bus */
+			struct usb_device *parent = dev->parent;
+			struct usb_device *p;
+			int i, j;
+
+			/* find host controller for this device */
+			while (parent->parent)
+				parent = parent->parent;
+			/* find host controller index */
+			for (i = 0, j = 0; i < USB_MAX_DEVICE; i++) {
+				p = usb_get_dev_index(i);
+				if (!p)
+					break;
+				/* host controller */
+				if (!p->parent) {
+					if (parent == p) {
+						port = j;
+						break;
+					}
+					j++;
+				}
+			}
+		}
+		if (port < 0) {
+			printf("cannot locate device's port.\n");
+		} else {
+			char buf[5];
+			sprintf(buf, "%d", port);
+			setenv("usbdevport", buf);
+		}
+	}
+	return ret;
 }
 #endif
 
@@ -1045,7 +1101,7 @@ unsigned long usb_stor_read(int device, lbaint_t blknr,
 	unsigned short smallblks;
 	struct usb_device *dev;
 	struct us_data *ss;
-	int retry, i;
+	int retry;
 	ccb *srb = &usb_ccb;
 
 	if (blkcnt == 0)
@@ -1053,15 +1109,10 @@ unsigned long usb_stor_read(int device, lbaint_t blknr,
 
 	device &= 0xff;
 	/* Setup  device */
-	debug("\nusb_read: dev %d \n", device);
-	dev = NULL;
-	for (i = 0; i < USB_MAX_DEVICE; i++) {
-		dev = usb_get_dev_index(i);
-		if (dev == NULL)
-			return 0;
-		if (dev->devnum == usb_dev_desc[device].target)
-			break;
-	}
+	debug("\nusb_read: dev %d\n", device);
+	dev = get_usb_dev(device);
+	if (!dev)
+		return 0;
 	ss = (struct us_data *)dev->privptr;
 
 	usb_disable_asynch(1); /* asynch transfer not allowed */
