@@ -1388,7 +1388,7 @@ const char *fdt_aliases[] = {
 	"vpu",
 	"csi0",
 	"csi1",
-	"caam",
+	NULL,
 	NULL,
 	NULL,
 	NULL,
