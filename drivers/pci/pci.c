@@ -723,6 +723,10 @@ void pci_init(void)
 {
 	hose_head = NULL;
 
+	/* allow env to disable pci init/enum */
+	if (getenv("pcidisable") != NULL)
+		return;
+
 	/* now call board specific pci_init()... */
 	pci_init_board();
 }
