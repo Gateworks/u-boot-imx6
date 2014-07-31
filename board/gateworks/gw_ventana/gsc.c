@@ -137,6 +137,15 @@ int gsc_info(int verbose)
 		break;
 	case '5': /* GW55xx */
 		break;
+	case '9': /* GW59xx */
+		switch (model[5]) {
+		case '1': /* GW5901 */
+			read_hwmon("VDD_1P0",  GSC_HWMON_VDD_EXT, 3);
+			break;
+		case '2': /* GW5902 */
+			break;
+		}
+		break;
 	}
 	return 0;
 }

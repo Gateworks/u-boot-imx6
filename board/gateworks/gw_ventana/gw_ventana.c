@@ -1448,6 +1448,18 @@ int ft_board_setup(void *blob, bd_t *bd)
 			ft_board_wdog_fixup(blob, WDOG1_PATH);
 	}
 
+	else if (board_type == GW5901) {
+		/* GW590x revB uses WDOG1_B as an external reset */
+		if (rev < 'B')
+			ft_board_wdog_fixup(blob, WDOG1_PATH);
+	}
+
+	else if (board_type == GW5902) {
+		/* GW590x revB uses WDOG1_B as an external reset */
+		if (rev < 'B')
+			ft_board_wdog_fixup(blob, WDOG1_PATH);
+	}
+
 	/* remove no-1-8-v if UHS-I support is present */
 	if (gpio_cfg[board_type].usd_vsel) {
 		debug("Enabling UHS-I support\n");
