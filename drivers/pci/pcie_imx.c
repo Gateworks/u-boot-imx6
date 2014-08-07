@@ -556,7 +556,7 @@ static int imx_pcie_link_up(void)
 		udelay(10);
 		count++;
 		if (count >= 2000) {
-			debug("phy link never came up\n");
+			printf("pcie phy link never came up\n");
 			debug("DEBUG_R0: 0x%08x, DEBUG_R1: 0x%08x\n",
 			      readl(MX6_DBI_ADDR + PCIE_PHY_DEBUG_R0),
 			      readl(MX6_DBI_ADDR + PCIE_PHY_DEBUG_R1));
