@@ -5248,6 +5248,9 @@ e1000_init(struct eth_device *nic, bd_t * bis)
 
 	ret_val = e1000_reset(nic);
 	if (ret_val < 0) {
+/* TODO: i210 link detect: e1000_swfw_sync_acquire is timing out */
+#if 0
+		debug("retval = %i %p %p\n", ret_val, hw, hw->nic);
 		if ((ret_val == -E1000_ERR_NOLINK) ||
 		    (ret_val == -E1000_ERR_TIMEOUT)) {
 			E1000_ERR(hw->nic, "Valid Link not detected\n");
@@ -5255,6 +5258,7 @@ e1000_init(struct eth_device *nic, bd_t * bis)
 			E1000_ERR(hw->nic, "Hardware Initialization Failed\n");
 		}
 		return 0;
+#endif
 	}
 	e1000_configure_tx(hw);
 	e1000_setup_rctl(hw);
