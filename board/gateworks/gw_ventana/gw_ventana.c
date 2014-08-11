@@ -480,8 +480,31 @@ struct display_info_t const displays[] = {{
 		.refresh        = 60,
 		.xres           = 1024,
 		.yres           = 768,
-		.pixclock       = 15385,
+		.pixclock       = 15385, /* 64MHz */
 		.left_margin    = 220,
+		.right_margin   = 40,
+		.upper_margin   = 21,
+		.lower_margin   = 7,
+		.hsync_len      = 60,
+		.vsync_len      = 10,
+		.sync           = FB_SYNC_EXT,
+		.vmode          = FB_VMODE_NONINTERLACED
+} }, {
+	/* AUO G070VW01 V0 */
+	.bus	= 2,
+	.addr	= 0x48,
+	.pixfmt	= IPU_PIX_FMT_LVDS666,
+	.detect	= detect_i2c,
+	.enable	= enable_lvds,
+	.mode	= {
+		.name           = "AUO-G070VW01",
+		.refresh        = 60,
+		.xres           = 800,		/* 800x480 active pixels */
+		.yres           = 480,
+		.pixclock       = 30030,	/* 33.3MHz */
+		/* vert: 508 period; 480 active; 28 blanking */
+		/* horz: 1056 period, 800 active, 256 blanking */
+		.left_margin    = 180,
 		.right_margin   = 40,
 		.upper_margin   = 21,
 		.lower_margin   = 7,
