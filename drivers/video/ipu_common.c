@@ -1109,6 +1109,7 @@ int32_t ipu_disable_channel(ipu_channel_t channel)
 	if ((channel == MEM_BG_SYNC) || (channel == MEM_FG_SYNC) ||
 	    (channel == MEM_DC_SYNC)) {
 		ipu_dp_dc_disable(channel, 0);
+		mdelay(50);
 	}
 
 	/* Disable DMA channel(s) */
