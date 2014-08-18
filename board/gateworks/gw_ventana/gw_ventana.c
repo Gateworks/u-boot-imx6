@@ -1317,6 +1317,27 @@ int board_init(void)
 	return 0;
 }
 
+#ifdef CONFIG_BOARD_ADJUST_ENV
+/*
+ * called after env is loaded from persistent storage but before any other
+ * subsystem init.
+ */
+void board_adjust_env(void)
+{
+	/*
+	 * default PCI to be disabled if not using GW5520. All other boards
+	 * don't really need PCI and there is still an issue with the 3.0.35
+	 * vendor kernel causing a kernel hang if the bootloader enables PCI.
+	 * Until we find and fix this, we will disable PCI by default for non
+	 * GW5520's.
+	 */
+	if (board_type != GW552x) {
+		if (getenv("pcidisable") == NULL)
+			setenv("pcidisable", "1");
+	}
+}
+#endif
+
 #if defined(CONFIG_DISPLAY_BOARDINFO_LATE)
 /*
  * called during late init (after relocation and after board_init())

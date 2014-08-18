@@ -308,6 +308,7 @@
   #define CONFIG_ENV_SPI_MODE            CONFIG_SF_DEFAULT_MODE
   #define CONFIG_ENV_SPI_MAX_HZ          CONFIG_SF_DEFAULT_SPEED
 #endif
+#define CONFIG_BOARD_ADJUST_ENV
 
 /* Environment */
 #define CONFIG_BOOTDELAY          3
