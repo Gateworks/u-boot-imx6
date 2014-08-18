@@ -1198,7 +1198,7 @@ int imx6_pcie_toggle_reset(void)
 /*
  * Most Ventana boards have a PLX PEX860x PCIe switch onboard and use its
  * GPIO's as PERST# signals for its downstream ports - configure the GPIO's
- * properly and assert reset for 100ms.
+ * properly and assert reset.
  */
 void board_pci_fixup_dev(struct pci_controller *hose, pci_dev_t dev,
 			 unsigned short vendor, unsigned short device,
@@ -1220,7 +1220,7 @@ void board_pci_fixup_dev(struct pci_controller *hose, pci_dev_t dev,
 		dw |= 0xfe;   /* GPIO1-7 output high */
 		pci_hose_write_config_dword(hose, dev, 0x644, dw);
 
-		mdelay(100);
+		mdelay(150);
 	}
 }
 #endif /* CONFIG_CMD_PCI */
