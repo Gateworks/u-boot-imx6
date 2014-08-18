@@ -315,6 +315,9 @@ static inline int print_cpuinfo(void)
 #endif
 int update_flash_size(int flash_size);
 int arch_early_init_r(void);
+#if defined(CONFIG_BOARD_ADJUST_ENV)
+void board_adjust_env(void);
+#endif
 
 /**
  * Show the DRAM size in a board-specific way

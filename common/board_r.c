@@ -469,6 +469,10 @@ static int initr_env(void)
 #endif /* CONFIG_I2CFAST */
 #endif /* CONFIG_405GP, CONFIG_405EP */
 #endif /* CONFIG_SYS_EXTBDINFO */
+
+#ifdef CONFIG_BOARD_ADJUST_ENV
+	board_adjust_env();
+#endif
 	return 0;
 }
 
