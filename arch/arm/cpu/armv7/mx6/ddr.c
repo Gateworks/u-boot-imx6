@@ -470,7 +470,7 @@ void mx6_dram_cfg(const struct mx6_ddr_sysinfo *i,
 	      (tcksrx & 0x7) << 3 |
 	      (tcksre & 0x7);
 	mmdc0->mdpdc = reg;
-	mmdc0->mapsr = (u32)0x00011006; /* ADOPT power down enabled */
+	mmdc0->mapsr = (u32)0x00001006; /* ADOPT power down enabled */
 
 	/* Step 11: Configure ZQ calibration: one-time and periodic 1ms */
 	mmdc0->mpzqhwctrl = (u32)0xa1390003;
