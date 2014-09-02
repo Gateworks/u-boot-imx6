@@ -466,6 +466,7 @@ void mx6_dram_cfg(const struct mx6_ddr_sysinfo *i,
 	reg = (tcke & 0x7) << 16 |
 	      5            << 12 |  /* PWDT_1: 256 cycles */
 	      5            <<  8 |  /* PWDT_0: 256 cycles */
+	      1	           <<  7 |  /* SLOW_PD */
 	      1            <<  6 |  /* BOTH_CS_PD */
 	      (tcksrx & 0x7) << 3 |
 	      (tcksre & 0x7);
