@@ -88,6 +88,7 @@ static void usb_hub_power_on(struct usb_hub_device *hub)
 	unsigned pgood_delay = hub->desc.bPwrOn2PwrGood * 2;
 	ALLOC_CACHE_ALIGN_BUFFER(struct usb_port_status, portsts, 1);
 	unsigned short portstatus;
+	const char *env;
 	int ret;
 
 	dev = hub->pusb_dev;
@@ -137,7 +138,13 @@ static void usb_hub_power_on(struct usb_hub_device *hub)
 	/*
 	 * Wait for power to become stable,
 	 * plus spec-defined max time for device to connect
+	 * but allow this time to be increased vi env variable as some
+	 * devices break the spec and require longer warm-up times
 	 */
+	env = getenv("usb_pgood_delay");
+	if (env)
+		pgood_delay = max(pgood_delay, simple_strtol(env, NULL, 0));
+	debug("pgood_delay=%dms\n", pgood_delay);
 	mdelay(pgood_delay + 1000);
 }
 
