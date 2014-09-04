@@ -442,20 +442,42 @@ void mx6_dram_cfg(const struct mx6_ddr_sysinfo *i,
 
 	/* Step 8: Write Mode Registers to Init DDR3 devices */
 	for (cs = 0; cs < i->ncs; cs++) {
+		/*
+		 * JEDEC defines the sequence in which the mode registers are
+		 * loaded during the initialization routine: MR2, MR3, MR1, MR0
+		 *
+		 * rtt_wr  | Dynamic ODT
+		 *       0 | disabled
+		 *       1 | RZQ/4
+		 *       2 | RZQ/2
+		 *
+		 * rtt_nom | Nonwrites     | Writes
+		 *       0 | disabled      | disabled
+		 *       1 | RZQ/4 (60ohm) | RZQ/4 (60ohm)
+		 *       2 | RZQ/2 (120ohm)| RZQ/2 (120ohm)
+		 *       3 | RZQ/6 (40ohm) | RZQ/6 (40ohm)
+		 *       4 | RZQ/12 (20ohm)| n/a
+		 *       5 | RZQ/8 (30ohm) | n/a
+		 */
 		/* MR2 */
 		reg = (i->rtt_wr & 3) << 9 | (m->SRT & 1) << 7 |
 		      ((tcwl - 3) & 3) << 3;
+		debug("MR2 CS%d: 0x%08x\n", cs, (u32)MR(reg, 2, 3, cs));
 		mmdc0->mdscr = (u32)MR(reg, 2, 3, cs);
 		/* MR3 */
+		debug("MR3 CS%d: 0x%08x\n", cs, (u32)MR(0, 3, 3, cs));
 		mmdc0->mdscr = (u32)MR(0, 3, 3, cs);
 		/* MR1 */
 		reg = ((i->rtt_nom & 1) ? 1 : 0) << 2 |
 		      ((i->rtt_nom & 2) ? 1 : 0) << 6;
+		debug("MR1 CS%d: 0x%08x\n", cs, (u32)MR(reg, 1, 3, cs));
 		mmdc0->mdscr = (u32)MR(reg, 1, 3, cs);
-		reg = ((tcl - 1) << 4) |	/* CAS */
-		      (1 << 8)   |		/* DLL Reset */
-		      ((twr - 3) << 9);		/* Write Recovery */
+		reg = ((tcl - 1) << 4) |  /* CAS */
+		      (1 << 8)   |	  /* DLL Reset */
+		      ((twr - 3) << 9) |  /* Write Recovery */
+		      (i->pd_fast_exit << 12); /* Precharge PD DLL on */
 		/* MR0 */
+		debug("MR0 CS%d: 0x%08x\n", cs, (u32)MR(reg, 0, 3, cs));
 		mmdc0->mdscr = (u32)MR(reg, 0, 3, cs);
 		/* ZQ calibration */
 		reg = (1 << 10);
@@ -466,10 +488,11 @@ void mx6_dram_cfg(const struct mx6_ddr_sysinfo *i,
 	reg = (tcke & 0x7) << 16 |
 	      5            << 12 |  /* PWDT_1: 256 cycles */
 	      5            <<  8 |  /* PWDT_0: 256 cycles */
-	      1	           <<  7 |  /* SLOW_PD */
 	      1            <<  6 |  /* BOTH_CS_PD */
 	      (tcksrx & 0x7) << 3 |
 	      (tcksre & 0x7);
+	if (!i->pd_fast_exit)
+		reg |= (1 << 7); /* SLOW_PD */
 	mmdc0->mdpdc = reg;
 	mmdc0->mapsr = (u32)0x00001006; /* ADOPT power down enabled */
 
