@@ -1579,6 +1579,30 @@ void ft_board_setup(void *blob, bd_t *bd)
 		    strlen((const char *)info->model) + 1);
 
 	/*
+	 * disable wdog1/wdog2 nodes for GW51xx below revC to work around
+	 * errata causing wdog timer to be unreliable.
+	 */
+	if (board_type == GW51xx) {
+		int i, rev = 0;
+		for (i = sizeof(ventana_info.model) - 1; i > 0; i--) {
+			if (ventana_info.model[i] >= 'A') {
+				rev = ventana_info.model[i];
+				break;
+			}
+		}
+		if (rev >= 'A' && rev < 'C') {
+			int off = fdt_path_offset(blob,
+				"/soc/aips-bus@02000000/wdog@020bc000");
+			if (off)
+				fdt_del_node(blob, off);
+			off = fdt_path_offset(blob,
+				"/soc/aips-bus@02000000/wdog@020c0000");
+			if (off)
+				fdt_del_node(blob, off);
+		}
+	}
+
+	/*
 	 * Peripheral Config:
 	 *  remove nodes by alias path if EEPROM config tells us the
 	 *  peripheral is not loaded on the board.
