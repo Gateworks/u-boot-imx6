@@ -49,6 +49,31 @@ char *get_reset_cause(void)
 	}
 }
 
+char *get_wdog_cause(int wdog)
+{
+	u16 cause;
+	struct wdog_regs *wdog1_regs = (struct wdog_regs *)WDOG1_BASE_ADDR;
+	struct wdog_regs *wdog2_regs = (struct wdog_regs *)WDOG2_BASE_ADDR;
+
+	if (wdog == 1)
+		cause = readw(&wdog1_regs->wrsr);
+	else if (wdog == 2)
+		cause = readw(&wdog2_regs->wrsr);
+	else
+		return "Cannot determine wdog reset cause";
+
+	switch (cause) {
+	case 0x10:
+		return "POR";
+	case 0x2:
+		return "TOUT";
+	case 0x1:
+		return "SFTW";
+	default:
+		return "unknown reset";
+	}
+}
+
 #if defined(CONFIG_MX53) || defined(CONFIG_MX6)
 #if defined(CONFIG_MX53)
 #define MEMCTL_BASE	ESDCTL_BASE_ADDR
@@ -124,15 +149,23 @@ const char *get_imx_type(u32 imxtype)
 int print_cpuinfo(void)
 {
 	u32 cpurev;
+	char *reset_cause;
 
 	cpurev = get_cpu_rev();
+	reset_cause = get_reset_cause();
 
 	printf("CPU:   Freescale i.MX%s rev%d.%d at %d MHz\n",
 		get_imx_type((cpurev & 0xFF000) >> 12),
 		(cpurev & 0x000F0) >> 4,
 		(cpurev & 0x0000F) >> 0,
 		mxc_get_clock(MXC_ARM_CLK) / 1000000);
-	printf("Reset cause: %s\n", get_reset_cause());
+
+	printf("Reset cause: %s\n", reset_cause);
+	if (strstr(reset_cause, "WDOG")) {
+		printf(" WDOG1 Reset cause: %s\n", get_wdog_cause(1));
+		printf(" WDOG2 Reset cause: %s\n", get_wdog_cause(2));
+	}
+
 	return 0;
 }
 #endif
