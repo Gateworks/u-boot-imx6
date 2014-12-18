@@ -492,7 +492,7 @@ struct display_info_t const displays[] = {{
 } }, {
 	/* AUO G070VW01 V0 */
 	.bus	= 2,
-	.addr	= 0x48,
+	.addr	= 0x49,
 	.pixfmt	= IPU_PIX_FMT_LVDS666,
 	.detect	= detect_i2c,
 	.enable	= enable_lvds,
