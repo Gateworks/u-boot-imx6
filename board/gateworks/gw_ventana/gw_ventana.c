@@ -1537,6 +1537,10 @@ int misc_init_r(void)
 		/* board serial-number */
 		sprintf(str, "%6d", info->serial);
 		setenv("serial#", str);
+
+		/* memory MB */
+		sprintf(str, "%d", (int) (gd->ram_size >> 20));
+		setenv("mem_mb", str);
 	}
 
 
