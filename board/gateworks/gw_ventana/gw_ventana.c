@@ -1603,6 +1603,16 @@ void ft_board_setup(void *blob, bd_t *bd)
 		{ "fsl,imx6q-gpmi-nand",  MTD_DEV_TYPE_NAND, }, /* NAND flash */
 	};
 	const char *model = getenv("model");
+	int i;
+	char rev = 0;
+
+	/* determine board revision */
+	for (i = sizeof(ventana_info.model) - 1; i > 0; i--) {
+		if (ventana_info.model[i] >= 'A') {
+			rev = ventana_info.model[i];
+			break;
+		}
+	}
 
 	if (getenv("fdt_noauto")) {
 		puts("   Skiping ft_board_setup (fdt_noauto defined)\n");
@@ -1631,23 +1641,49 @@ void ft_board_setup(void *blob, bd_t *bd)
 	 * disable wdog1/wdog2 nodes for GW51xx below revC to work around
 	 * errata causing wdog timer to be unreliable.
 	 */
-	if (board_type == GW51xx) {
-		int i, rev = 0;
-		for (i = sizeof(ventana_info.model) - 1; i > 0; i--) {
-			if (ventana_info.model[i] >= 'A') {
-				rev = ventana_info.model[i];
-				break;
+	if (board_type == GW51xx && rev >= 'A' && rev < 'C') {
+		int off = fdt_path_offset(blob,
+			"/soc/aips-bus@02000000/wdog@020bc000");
+		if (off)
+			fdt_del_node(blob, off);
+		off = fdt_path_offset(blob,
+			"/soc/aips-bus@02000000/wdog@020c0000");
+		if (off)
+			fdt_del_node(blob, off);
+	}
+
+	/*
+	 * isolate CSI0_DATA_EN for GW551x below revB to work around
+	 * errata causing non functional digital video in (it is not hooked up)
+	 */
+	else if (board_type == GW551x && rev == 'A') {
+		u32 *range = NULL;
+		int len, off;
+		const u32 *handle = NULL;
+
+		off = fdt_node_offset_by_compatible(blob, -1,
+						    "fsl,imx-tda1997x-video");
+		if (off)
+			handle = fdt_getprop(blob, off, "pinctrl-0", NULL);
+		if (handle)
+			off = fdt_node_offset_by_phandle(blob,
+							 fdt32_to_cpu(*handle));
+		if (off)
+			range = (u32 *)fdt_getprop(blob, off, "fsl,pins", &len);
+		if (range) {
+			len /= sizeof(u32);
+			for (i = 0; i < len; i += 6) {
+				u32 mux_reg = fdt32_to_cpu(range[i+0]);
+				u32 conf_reg = fdt32_to_cpu(range[i+1]);
+				/* mux PAD_CSI0_DATA_EN to GPIO */
+				if (is_cpu_type(MXC_CPU_MX6Q) &&
+				    mux_reg == 0x260 && conf_reg == 0x630)
+					range[i+3] = cpu_to_fdt32(0x5);
+				else if (!is_cpu_type(MXC_CPU_MX6Q) &&
+				    mux_reg == 0x08c && conf_reg == 0x3a0)
+					range[i+3] = cpu_to_fdt32(0x5);
 			}
-		}
-		if (rev >= 'A' && rev < 'C') {
-			int off = fdt_path_offset(blob,
-				"/soc/aips-bus@02000000/wdog@020bc000");
-			if (off)
-				fdt_del_node(blob, off);
-			off = fdt_path_offset(blob,
-				"/soc/aips-bus@02000000/wdog@020c0000");
-			if (off)
-				fdt_del_node(blob, off);
+			fdt_setprop_inplace(blob, off, "fsl,pins", range, len);
 		}
 	}
 
