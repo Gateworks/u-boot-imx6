@@ -330,13 +330,18 @@
 	\
 	"fdt_high=0xffffffff\0" \
 	"fdt_addr=0x18000000\0" \
+	"fixfdt=" \
+		"fdt addr ${fdt_addr}\0" \
 	"loadfdt=" \
 		"if ${fsload} ${fdt_addr} boot/${fdt_file}; then " \
 			"echo Loaded DTB from boot/${fdt_file}; " \
+			"run fixfdt; " \
 		"elif ${fsload} ${fdt_addr} boot/${fdt_file1}; then " \
 			"echo Loaded DTB from boot/${fdt_file1}; " \
+			"run fixfdt; " \
 		"elif ${fsload} ${fdt_addr} boot/${fdt_file2}; then " \
-				"echo Loaded DTB from boot/${fdt_file2}; " \
+			"echo Loaded DTB from boot/${fdt_file2}; " \
+			"run fixfdt; " \
 		"fi\0" \
 	\
 	"script=boot/6x_bootscript-ventana\0" \
@@ -355,7 +360,7 @@
 			"setenv bootargs console=${console},${baudrate} " \
 				"root=/dev/mmcblk0p1 rootfstype=ext4 " \
 				"rootwait rw ${video} ${extra}; " \
-			"if run loadfdt && fdt addr ${fdt_addr}; then " \
+			"if run loadfdt; then " \
 				"bootm ${loadaddr} - ${fdt_addr}; " \
 			"else " \
 				"bootm; " \
@@ -369,7 +374,7 @@
 			"setenv bootargs console=${console},${baudrate} " \
 				"root=/dev/sda1 rootfstype=ext4 " \
 				"rootwait rw ${video} ${extra}; " \
-			"if run loadfdt && fdt addr ${fdt_addr}; then " \
+			"if run loadfdt; then " \
 				"bootm ${loadaddr} - ${fdt_addr}; " \
 			"else " \
 				"bootm; " \
@@ -382,7 +387,7 @@
 			"setenv bootargs console=${console},${baudrate} " \
 				"root=/dev/sda1 rootfstype=ext4 " \
 				"rootwait rw ${video} ${extra}; " \
-			"if run loadfdt && fdt addr ${fdt_addr}; then " \
+			"if run loadfdt; then " \
 				"bootm ${loadaddr} - ${fdt_addr}; " \
 			"else " \
 				"bootm; " \
@@ -436,7 +441,7 @@
 			"setenv bootargs console=${console},${baudrate} " \
 				"root=ubi0:rootfs ubi.mtd=2 " \
 				"rootfstype=ubifs ${video} ${extra}; " \
-			"if run loadfdt && fdt addr ${fdt_addr}; then " \
+			"if run loadfdt; then " \
 				"ubifsumount; " \
 				"bootm ${loadaddr} - ${fdt_addr}; " \
 			"else " \
