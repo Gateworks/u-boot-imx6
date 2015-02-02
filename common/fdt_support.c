@@ -1409,3 +1409,35 @@ u64 fdt_get_base_address(void *fdt, int node)
 
 	return prop ? fdt_translate_address(fdt, node, prop + naddr) : 0;
 }
+
+/*
+ * Update native-mode in display-timings from display environment variable.
+ * The node to update are specified by path.
+ */
+int fdt_fixup_display(void *blob, const char *path, const char *display)
+{
+	int off, toff;
+
+	if (!display || !path)
+		return -1;
+
+	toff = fdt_path_offset(blob, path);
+	if (toff >= 0)
+		toff = fdt_subnode_offset(blob, toff, "display-timings");
+	if (toff < 0)
+		return toff;
+
+	for (off = fdt_first_subnode(blob, toff);
+	     off >= 0;
+	     off = fdt_next_subnode(blob, off))
+	{
+		uint32_t handle = fdt_get_phandle(blob, off);
+		debug("%s:0x%x\n", fdt_get_name(blob, off, NULL),
+		      fdt32_to_cpu(handle));
+		if (strcasecmp(fdt_get_name(blob, off, NULL), display) == 0){
+			fdt_setprop_u32(blob, toff, "native-mode", handle);
+			break;
+		}
+	}
+	return toff;
+}

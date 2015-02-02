@@ -44,6 +44,7 @@ void fdt_fixup_ethernet(void *fdt);
 int fdt_find_and_setprop(void *fdt, const char *node, const char *prop,
 			 const void *val, int len, int create);
 void fdt_fixup_qe_firmware(void *fdt);
+int fdt_fixup_display(void *blob, const char *path, const char *display);
 
 #if defined(CONFIG_HAS_FSL_DR_USB) || defined(CONFIG_HAS_FSL_MPH_USB)
 void fdt_fixup_dr_usb(void *blob, bd_t *bd);
