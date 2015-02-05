@@ -1706,11 +1706,11 @@ void ft_board_setup(void *blob, bd_t *bd)
 		int off = fdt_path_offset(blob,
 			"/soc/aips-bus@02000000/wdog@020bc000");
 		if (off)
-			fdt_del_node(blob, off);
+			fdt_status_disabled(blob, off);
 		off = fdt_path_offset(blob,
 			"/soc/aips-bus@02000000/wdog@020c0000");
 		if (off)
-			fdt_del_node(blob, off);
+			fdt_status_disabled(blob, off);
 	}
 
 	/*
