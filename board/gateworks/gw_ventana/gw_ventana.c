@@ -686,6 +686,8 @@ static iomux_v3_cfg_t const gw52xx_gpio_pads[] = {
 	IOMUX_PADS(PAD_EIM_D31__GPIO3_IO31 | DIO_PAD_CFG),
 	/* PCI_RST# */
 	IOMUX_PADS(PAD_ENET_TXD1__GPIO1_IO29 | DIO_PAD_CFG),
+	/* PCI_RST# (GW522x) */
+	IOMUX_PADS(PAD_EIM_D23__GPIO3_IO23 | DIO_PAD_CFG),
 	/* PCIESKT_WDIS# */
 	IOMUX_PADS(PAD_GPIO_17__GPIO7_IO12 | DIO_PAD_CFG),
 };
@@ -1185,6 +1187,10 @@ static void setup_board_gpio(int board)
 	}
 
 #if !defined(CONFIG_CMD_PCI)
+	/* GW522x Uses GPIO3_IO23 for PCIE_RST# */
+	if (board_type == GW52xx && info->model[4] == '2')
+		gpio_cfg[board].pcie_rst = IMX_GPIO_NR(3, 23);
+
 	/* assert PCI_RST# (released by OS when clock is valid) */
 	gpio_direction_output(gpio_cfg[board].pcie_rst, 0);
 #endif
@@ -1697,6 +1703,29 @@ void ft_board_setup(void *blob, bd_t *bd)
 			"/soc/aips-bus@02000000/wdog@020c0000");
 		if (off)
 			fdt_status_disabled(blob, off);
+	}
+
+	/* GW522x Uses GPIO3_IO23 instead of GPIO1_IO29 */
+	else if (board_type == GW52xx && info->model[4] == '2') {
+		int off;
+		u32 handle = 0;
+		u32 *range = NULL;
+
+		off = fdt_node_offset_by_compatible(blob, -1, "fsl,imx6q-pcie");
+		if (off)
+			range = (u32 *)fdt_getprop(blob, off, "reset-gpio",
+						   NULL);
+
+		if (range) {
+			off = fdt_path_offset(
+				blob, "/soc/aips-bus@02000000/gpio@020a4000");
+			if (off)
+				handle = fdt_get_phandle(blob, off);
+			if (handle) {
+				range[0] = cpu_to_fdt32(handle);
+				range[1] = cpu_to_fdt32(23);
+			}
+		}
 	}
 
 	/*
