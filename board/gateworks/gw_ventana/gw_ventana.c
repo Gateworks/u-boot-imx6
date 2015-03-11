@@ -1799,6 +1799,9 @@ void ft_board_setup(void *blob, bd_t *bd)
 			}
 			fdt_setprop_inplace(blob, off, "fsl,pins", range, len);
 		}
+
+		/* set BT656 video format */
+		ft_sethdmiinfmt(blob, "yuv422bt656");
 	}
 
 	/*
