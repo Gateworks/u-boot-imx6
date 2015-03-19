@@ -1631,23 +1631,23 @@ static int ft_sethdmiinfmt(void *blob, char* mode)
 		return off;
 
 	if (0 == strcasecmp(mode, "yuv422bt656")) {
-		u32 cfg[] = { 0x00, 0x00, 0x00, 0x82, 0x81, 0x00,
-			      0x00, 0x00, 0x00 };
+		u8 cfg[] = { 0x00, 0x00, 0x00, 0x82, 0x81, 0x00,
+			     0x00, 0x00, 0x00 };
 		mode = "422_ccir";
 		fdt_setprop(blob, off, "vidout_fmt", mode, strlen(mode) + 1);
 		fdt_setprop_u32(blob, off, "vidout_trc", 1);
 		fdt_setprop_u32(blob, off, "vidout_blc", 1);
 		fdt_setprop(blob, off, "vidout_portcfg", cfg, sizeof(cfg));
-		printf("  set HDMI input mode to %s\n", mode);
+		printf("   set HDMI input mode to %s\n", mode);
 	} else if (0 == strcasecmp(mode, "yuv422smp")) {
-		u32 cfg[] = { 0x00, 0x00, 0x00, 0x88, 0x87, 0x00,
-			      0x82, 0x81, 0x00 };
+		u8 cfg[] = { 0x00, 0x00, 0x00, 0x88, 0x87, 0x00,
+			     0x82, 0x81, 0x00 };
 		mode = "422_smp";
 		fdt_setprop(blob, off, "vidout_fmt", mode, strlen(mode) + 1);
 		fdt_setprop_u32(blob, off, "vidout_trc", 0);
 		fdt_setprop_u32(blob, off, "vidout_blc", 0);
 		fdt_setprop(blob, off, "vidout_portcfg", cfg, sizeof(cfg));
-		printf("  set HDMI input mode to %s\n", mode);
+		printf("   set HDMI input mode to %s\n", mode);
 	} else
 		return -EINVAL;
 
