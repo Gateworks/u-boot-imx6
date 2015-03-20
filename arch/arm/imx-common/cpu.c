@@ -57,6 +57,31 @@ static char *get_reset_cause(void)
 	}
 }
 
+static char *get_wdog_cause(int wdog)
+{
+	u16 cause;
+	struct wdog_regs *wdog1_regs = (struct wdog_regs *)WDOG1_BASE_ADDR;
+	struct wdog_regs *wdog2_regs = (struct wdog_regs *)WDOG2_BASE_ADDR;
+
+	if (wdog == 1)
+		cause = readw(&wdog1_regs->wrsr);
+	else if (wdog == 2)
+		cause = readw(&wdog2_regs->wrsr);
+	else
+		return "Cannot determine wdog reset cause";
+
+	switch (cause) {
+	case 0x10:
+		return "POR";
+	case 0x2:
+		return "TOUT";
+	case 0x1:
+		return "SFTW";
+	default:
+		return "unknown reset";
+	}
+}
+
 u32 get_imx_reset_cause(void)
 {
 	return reset_cause;
@@ -209,6 +234,11 @@ int print_cpuinfo(void)
 #endif /* #if defined(CONFIG_MX6) */
 
 	printf("Reset cause: %s\n", get_reset_cause());
+	if (reset_cause == 0x00010) {
+		printf(" WDOG1 Reset cause: %s\n", get_wdog_cause(1));
+		printf(" WDOG2 Reset cause: %s\n", get_wdog_cause(2));
+	}
+
 	return 0;
 }
 #endif
