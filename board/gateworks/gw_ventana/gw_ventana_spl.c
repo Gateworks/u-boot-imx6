@@ -522,6 +522,9 @@ void board_init_f(ulong dummy)
 	/* setup GP timer */
 	timer_init();
 
+	/* arch specific clocks (ushcd) */
+	get_clocks();
+
 	/* UART clocks enabled and gd valid - init serial console */
 	preloader_console_init();
 
