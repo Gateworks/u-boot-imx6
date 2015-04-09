@@ -60,11 +60,16 @@ static int do_boot_mode(cmd_tbl_t *cmdtp, int flag, int argc,
 {
 	const struct boot_mode *p;
 	int reset_requested = 1;
+	unsigned cfg_val = 0;
 
 	if (argc < 2)
 		return CMD_RET_USAGE;
 	p = search_modes(argv[1]);
-	if (!p)
+	if (p)
+		cfg_val = p->cfg_val;
+	else if (strncasecmp(argv[1], "0x", 2) == 0)
+		cfg_val = simple_strtol(argv[1], NULL, 16);
+	if (!cfg_val)
 		return CMD_RET_USAGE;
 	if (argc == 3) {
 		if (strcmp(argv[2], "noreset"))
@@ -72,8 +77,8 @@ static int do_boot_mode(cmd_tbl_t *cmdtp, int flag, int argc,
 		reset_requested = 0;
 	}
 
-	boot_mode_apply(p->cfg_val);
-	if (reset_requested && p->cfg_val)
+	boot_mode_apply(cfg_val);
+	if (reset_requested && cfg_val)
 		do_reset(NULL, 0, 0, NULL);
 	return 0;
 }
