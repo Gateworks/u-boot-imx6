@@ -259,7 +259,7 @@ void env_relocate_spec(void)
 #endif
 #if defined(CONFIG_ENV_IS_IN_NAND)
 		case BOOT_DEVICE_NAND:
-			env_size = CONFIG_ENV_MMC_SIZE - ENV_HEADER_SIZE;
+			env_size = CONFIG_ENV_NAND_SIZE - ENV_HEADER_SIZE;
 			nand_env_relocate_spec();
 			break;
 #endif

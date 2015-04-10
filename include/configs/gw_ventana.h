@@ -7,12 +7,14 @@
 #ifndef __CONFIG_H
 #define __CONFIG_H
 
+#include <linux/sizes.h>
+
 /* SPL */
 #define CONFIG_SPL_BOARD_INIT
 #define CONFIG_SPL_NAND_SUPPORT
 #define CONFIG_SPL_MMC_SUPPORT
 /* Location in NAND to read U-Boot from */
-#define CONFIG_SYS_NAND_U_BOOT_OFFS     (14 * 1024 * 1024)
+#define CONFIG_SYS_NAND_U_BOOT_OFFS     (14 * SZ_1M)
 /* Location on MMC to read U-Boot from */
 #define CONFIG_SYS_MMCSD_RAW_MODE_U_BOOT_SECTOR 138 /* 69KB */
 
@@ -37,7 +39,7 @@
 #define CONFIG_SYS_GENERIC_BOARD
 
 /* Size of malloc() pool */
-#define CONFIG_SYS_MALLOC_LEN		(10 * 1024 * 1024)
+#define CONFIG_SYS_MALLOC_LEN		(10 * SZ_1M)
 
 /* Init Functions */
 #define CONFIG_BOARD_EARLY_INIT_F
@@ -247,7 +249,7 @@
 #define CONFIG_SYS_MEMTEST_START       0x10000000
 #define CONFIG_SYS_MEMTEST_END	       0x10010000
 #define CONFIG_SYS_MEMTEST_SCRATCH     0x10800000
-#define CONFIG_SYS_TEXT_BASE	         0x17800000
+#define CONFIG_SYS_TEXT_BASE	       0x17800000
 #define CONFIG_SYS_LOAD_ADDR           0x12000000
 
 /* Physical Memory Map */
@@ -283,28 +285,30 @@
 /* Persistent Environment Config */
 #define CONFIG_ENV_OVERWRITE    /* allow to overwrite serial and ethaddr */
 #ifdef CONFIG_SPI_FLASH
-#define CONFIG_ENV_IS_IN_SPI_FLASH
+  #define CONFIG_ENV_IS_IN_SPI_FLASH
+  #define CONFIG_ENV_OFFSET		(512 * SZ_1K)
+  #define CONFIG_ENV_SECT_SIZE		(64 * SZ_1K)
+  #define CONFIG_ENV_SIZE		(8 * SZ_1K)
+  #define CONFIG_ENV_SPI_BUS		CONFIG_SF_DEFAULT_BUS
+  #define CONFIG_ENV_SPI_CS		CONFIG_SF_DEFAULT_CS
+  #define CONFIG_ENV_SPI_MODE		CONFIG_SF_DEFAULT_MODE
+  #define CONFIG_ENV_SPI_MAX_HZ		CONFIG_SF_DEFAULT_SPEED
 #else
-#define CONFIG_ENV_IS_IN_NAND
-#endif
-#if defined(CONFIG_ENV_IS_IN_MMC)
-  #define CONFIG_ENV_OFFSET              (6 * 64 * 1024)
-  #define CONFIG_ENV_SIZE                (8 * 1024)
-  #define CONFIG_SYS_MMC_ENV_DEV         0
-#elif defined(CONFIG_ENV_IS_IN_NAND)
-  #define CONFIG_ENV_OFFSET              (16 << 20)
-  #define CONFIG_ENV_SECT_SIZE           (128 << 10)
-  #define CONFIG_ENV_SIZE                CONFIG_ENV_SECT_SIZE
-  #define CONFIG_ENV_OFFSET_REDUND       (CONFIG_ENV_OFFSET + (512 << 10))
-  #define CONFIG_ENV_SIZE_REDUND         CONFIG_ENV_SIZE
-#elif defined(CONFIG_ENV_IS_IN_SPI_FLASH)
-  #define CONFIG_ENV_OFFSET              (512 * 1024)
-  #define CONFIG_ENV_SECT_SIZE           (64 * 1024)
-  #define CONFIG_ENV_SIZE                (8 * 1024)
-  #define CONFIG_ENV_SPI_BUS             CONFIG_SF_DEFAULT_BUS
-  #define CONFIG_ENV_SPI_CS              CONFIG_SF_DEFAULT_CS
-  #define CONFIG_ENV_SPI_MODE            CONFIG_SF_DEFAULT_MODE
-  #define CONFIG_ENV_SPI_MAX_HZ          CONFIG_SF_DEFAULT_SPEED
+  /* storage medium dependent on boot device */
+  #define CONFIG_ENV_IS_DYNAMIC
+
+  /* allow env in MMC */
+  #define CONFIG_ENV_IS_IN_MMC
+  #define CONFIG_SYS_MMC_ENV_DEV	0
+  #define CONFIG_ENV_MMC_SIZE		(64 * SZ_1K)
+  #define CONFIG_ENV_MMC_OFFSET		(709 * SZ_1K)
+  #define CONFIG_ENV_MMC_OFFSET_REDUND	(CONFIG_ENV_MMC_OFFSET + (64 * SZ_1K))
+
+  /* allow env in NAND */
+  #define CONFIG_ENV_IS_IN_NAND
+  #define CONFIG_ENV_NAND_SIZE		(128 * SZ_1K)
+  #define CONFIG_ENV_NAND_OFFSET	(16 * SZ_1M)
+  #define CONFIG_ENV_NAND_OFFSET_REDUND	(CONFIG_ENV_NAND_OFFSET + (512 * SZ_1K))
 #endif
 
 /* Environment */
