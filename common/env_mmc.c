@@ -74,7 +74,7 @@ int env_init(void)
 	return 0;
 }
 
-static int init_mmc_for_env(struct mmc *mmc)
+static const char *init_mmc_for_env(struct mmc *mmc)
 {
 #ifdef CONFIG_SYS_MMC_ENV_PART
 	int dev = CONFIG_SYS_MMC_ENV_DEV;
@@ -84,26 +84,20 @@ static int init_mmc_for_env(struct mmc *mmc)
 #endif
 #endif
 
-	if (!mmc) {
-		puts("No MMC card found\n");
-		return -1;
-	}
+	if (!mmc)
+		return "No MMC card found";
 
-	if (mmc_init(mmc)) {
-		puts("MMC init failed\n");
-		return -1;
-	}
+	if (mmc_init(mmc))
+		return "MMC init failed";
 
 #ifdef CONFIG_SYS_MMC_ENV_PART
 	if (CONFIG_SYS_MMC_ENV_PART != mmc->part_num) {
-		if (mmc_switch_part(dev, CONFIG_SYS_MMC_ENV_PART)) {
-			puts("MMC partition switch failed\n");
-			return -1;
-		}
+		if (mmc_switch_part(dev, CONFIG_SYS_MMC_ENV_PART))
+			return "MMC partition switch failed";
 	}
 #endif
 
-	return 0;
+	return NULL;
 }
 
 static void fini_mmc_for_env(struct mmc *mmc)
@@ -153,9 +147,13 @@ int saveenv(void)
 	struct mmc *mmc = find_mmc_device(CONFIG_SYS_MMC_ENV_DEV);
 	u32	offset;
 	int	ret, copy = 0;
+	const char *errmsg;
 
-	if (init_mmc_for_env(mmc))
+	errmsg = init_mmc_for_env(mmc);
+	if (errmsg) {
+		printf("%s\n", errmsg);
 		return 1;
+	}
 
 	res = (char *)&env_new->data;
 	len = hexport_r(&env_htab, '\0', 0, &res, env_size, 0, NULL);
@@ -236,6 +234,7 @@ void env_relocate_spec(void)
 	env_t *ep;
 	int ret;
 	int dev = CONFIG_SYS_MMC_ENV_DEV;
+	const char *errmsg = NULL;
 
 	ALLOC_CACHE_ALIGN_BUFFER(env_t, tmp_env1, 1);
 	ALLOC_CACHE_ALIGN_BUFFER(env_t, tmp_env2, 1);
@@ -247,7 +246,8 @@ void env_relocate_spec(void)
 
 	mmc = find_mmc_device(dev);
 
-	if (init_mmc_for_env(mmc)) {
+	errmsg = init_mmc_for_env(mmc);
+	if (errmsg) {
 		ret = 1;
 		goto err;
 	}
@@ -273,6 +273,7 @@ void env_relocate_spec(void)
 		(crc32(0, tmp_env2->data, env_size) == tmp_env2->crc);
 
 	if (!crc1_ok && !crc2_ok) {
+		errmsg = "!bad CRC";
 		ret = 1;
 		goto fini;
 	} else if (crc1_ok && !crc2_ok) {
@@ -308,7 +309,7 @@ fini:
 	fini_mmc_for_env(mmc);
 err:
 	if (ret)
-		set_default_env(NULL);
+		set_default_env(errmsg);
 #endif
 #else /* ! CONFIG_ENV_OFFSET_REDUND */
 #if !defined(ENV_IS_EMBEDDED)
@@ -317,6 +318,7 @@ err:
 	u32 offset;
 	int ret;
 	int dev = CONFIG_SYS_MMC_ENV_DEV;
+	const char *errmsg = NULL;
 
 	env_name_spec = "MMC";
 #ifdef CONFIG_SPL_BUILD
@@ -325,7 +327,8 @@ err:
 
 	mmc = find_mmc_device(dev);
 
-	if (init_mmc_for_env(mmc)) {
+	errmsg = init_mmc_for_env(mmc);
+	if (errmsg) {
 		ret = 1;
 		goto err;
 	}
@@ -336,6 +339,7 @@ err:
 	}
 
 	if (read_env(mmc, CONFIG_ENV_SIZE, offset, buf)) {
+		errmsg = "!readenv() failed";
 		ret = 1;
 		goto fini;
 	}
@@ -347,7 +351,7 @@ fini:
 	fini_mmc_for_env(mmc);
 err:
 	if (ret)
-		set_default_env(NULL);
+		set_default_env(errmsg);
 #endif
 #endif /* CONFIG_ENV_OFFSET_REDUND */
 }
