@@ -18,8 +18,6 @@
 #include <fat.h>
 #include <mmc.h>
 
-char *env_name_spec = "FAT";
-
 env_t *env_ptr;
 
 DECLARE_GLOBAL_DATA_PTR;
@@ -29,6 +27,8 @@ int env_init(void)
 	/* use default */
 	gd->env_addr = (ulong)&default_environment[0];
 	gd->env_valid = 1;
+
+	env_name_spec = "FAT";
 
 	return 0;
 }

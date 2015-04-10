@@ -23,8 +23,6 @@ DECLARE_GLOBAL_DATA_PTR;
 
 env_t *env_ptr;
 
-char *env_name_spec = "EEPROM";
-
 static int eeprom_bus_read(unsigned dev_addr, unsigned offset,
 			   uchar *buffer, unsigned cnt)
 {
@@ -153,6 +151,8 @@ int env_init(void)
 	uchar buf[64], flags[2];
 	int i, crc_ok[2] = {0, 0};
 
+	env_name_spec = "EEPROM";
+
 	eeprom_init();	/* prepare for EEPROM read/write */
 
 	off_env[0] = CONFIG_ENV_OFFSET;
@@ -226,6 +226,8 @@ int env_init(void)
 	ulong crc, len, new;
 	unsigned off;
 	uchar buf[64];
+
+	env_name_spec = "EEPROM";
 
 	eeprom_init();	/* prepare for EEPROM read/write */
 

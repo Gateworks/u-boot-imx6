@@ -16,6 +16,9 @@
 #include <errno.h>
 #include <malloc.h>
 
+char *env_name_spec;
+unsigned int env_size = ENV_SIZE;
+
 DECLARE_GLOBAL_DATA_PTR;
 
 /************************************************************************
@@ -99,7 +102,7 @@ void set_default_env(const char *s)
 {
 	int flags = 0;
 
-	if (sizeof(default_environment) > ENV_SIZE) {
+	if (sizeof(default_environment) > env_size) {
 		puts("*** Error - default environment is too large\n\n");
 		return;
 	}
@@ -168,7 +171,7 @@ static int env_aes_cbc_crypt(env_t *env, const int enc)
 	aes_expand_key(key, key_exp);
 
 	/* Calculate the number of AES blocks to encrypt. */
-	aes_blocks = ENV_SIZE / AES_KEY_LENGTH;
+	aes_blocks = env_size / AES_KEY_LENGTH;
 
 	if (enc)
 		aes_cbc_encrypt_blocks(key_exp, data, data, aes_blocks);
@@ -198,7 +201,7 @@ int env_import(const char *buf, int check)
 
 		memcpy(&crc, &ep->crc, sizeof(crc));
 
-		if (crc32(0, ep->data, ENV_SIZE) != crc) {
+		if (crc32(0, ep->data, env_size) != crc) {
 			set_default_env("!bad CRC");
 			return 0;
 		}
@@ -212,7 +215,7 @@ int env_import(const char *buf, int check)
 		return ret;
 	}
 
-	if (himport_r(&env_htab, (char *)ep->data, ENV_SIZE, '\0', 0, 0,
+	if (himport_r(&env_htab, (char *)ep->data, env_size, '\0', 0, 0,
 			0, NULL)) {
 		gd->flags |= GD_FLG_ENV_READY;
 		return 1;
@@ -233,7 +236,7 @@ int env_export(env_t *env_out)
 	int ret;
 
 	res = (char *)env_out->data;
-	len = hexport_r(&env_htab, '\0', 0, &res, ENV_SIZE, 0, NULL);
+	len = hexport_r(&env_htab, '\0', 0, &res, env_size, 0, NULL);
 	if (len < 0) {
 		error("Cannot export environment: errno = %d\n", errno);
 		return 1;
@@ -244,7 +247,7 @@ int env_export(env_t *env_out)
 	if (ret)
 		return ret;
 
-	env_out->crc = crc32(0, env_out->data, ENV_SIZE);
+	env_out->crc = crc32(0, env_out->data, env_size);
 
 	return 0;
 }
@@ -299,3 +302,67 @@ int env_complete(char *var, int maxv, char *cmdv[], int bufsz, char *buf)
 	return found;
 }
 #endif
+
+#if defined(CONFIG_ENV_IS_DYNAMIC)
+#include <spl.h>
+
+int env_init(void)
+{
+	switch (spl_boot_device()) {
+#if defined(CONFIG_ENV_IS_IN_MMC)
+		case BOOT_DEVICE_MMC1:
+			return mmc_env_init();
+			break;
+#endif
+#if defined(CONFIG_ENV_IS_IN_NAND)
+		case BOOT_DEVICE_NAND:
+			return nand_env_init();
+			break;
+#endif
+		default:
+			puts("Unknown boot device\n");
+	}
+	return -1;
+}
+
+void env_relocate_spec(void)
+{
+	switch(spl_boot_device()) {
+#if defined(CONFIG_ENV_IS_IN_MMC)
+		case BOOT_DEVICE_MMC1:
+			env_size = CONFIG_ENV_MMC_SIZE - ENV_HEADER_SIZE;
+			mmc_env_relocate_spec();
+			break;
+#endif
+#if defined(CONFIG_ENV_IS_IN_NAND)
+		case BOOT_DEVICE_NAND:
+			env_size = CONFIG_ENV_NAND_SIZE - ENV_HEADER_SIZE;
+			nand_env_relocate_spec();
+			break;
+#endif
+		default:
+			puts("Unknown boot device\n");
+	}
+}
+
+#if defined(CONFIG_CMD_SAVEENV)
+int saveenv(void)
+{
+	switch(spl_boot_device()) {
+#if defined(CONFIG_ENV_IS_IN_MMC)
+		case BOOT_DEVICE_MMC1:
+			return mmc_saveenv();
+			break;
+#endif
+#if defined(CONFIG_ENV_IS_IN_NAND)
+		case BOOT_DEVICE_NAND:
+			return nand_saveenv();
+			break;
+#endif
+		default:
+			puts("Unknown boot device\n");
+	}
+	return -1;
+}
+#endif /* if defined(CONFIG_CMD_SAVEENV) */
+#endif /* if defined(CONFIG_ENV_IS_DYNAMIC) */

@@ -11,8 +11,6 @@
 #include <environment.h>
 #include <linux/stddef.h>
 
-char *env_name_spec = "Remote";
-
 #ifdef ENV_IS_EMBEDDED
 env_t *env_ptr = &environment;
 #else /* ! ENV_IS_EMBEDDED */
@@ -35,6 +33,9 @@ int env_init(void)
 
 	gd->env_addr = (ulong)default_environment;
 	gd->env_valid = 0;
+
+	env_name_spec = "Remote";
+
 	return 0;
 }
 
