@@ -17,18 +17,26 @@
 #include <search.h>
 #include <errno.h>
 
+#if defined(CONFIG_ENV_IS_DYNAMIC)
+# undef CONFIG_ENV_SIZE
+# define CONFIG_ENV_OFFSET		CONFIG_ENV_MMC_OFFSET
+# define CONFIG_ENV_SIZE		CONFIG_ENV_MMC_SIZE
+# if defined(CONFIG_ENV_MMC_OFFSET_REDUND)
+#   define CONFIG_ENV_OFFSET_REDUND	CONFIG_ENV_MMC_OFFSET_REDUND
+# endif
+#else
 #if defined(CONFIG_ENV_SIZE_REDUND) &&  \
 	(CONFIG_ENV_SIZE_REDUND != CONFIG_ENV_SIZE)
 #error CONFIG_ENV_SIZE_REDUND should be the same as CONFIG_ENV_SIZE
 #endif
-
-char *env_name_spec = "MMC";
+#endif /* if defined(CONFIG_ENV_IS_DYNAMIC) */
 
 #ifdef ENV_IS_EMBEDDED
-env_t *env_ptr = &environment;
-#else /* ! ENV_IS_EMBEDDED */
-env_t *env_ptr;
-#endif /* ENV_IS_EMBEDDED */
+static env_t *env_ptr = &environment;
+#elif CONFIG_ENV_OFFSET_REDUND
+static env_t *env_ptr;
+#endif
+extern unsigned int env_size;
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -59,7 +67,11 @@ __weak int mmc_get_env_dev(void)
 	return CONFIG_SYS_MMC_ENV_DEV;
 }
 
+#if defined(CONFIG_ENV_IS_DYNAMIC)
+int mmc_env_init(void)
+#else
 int env_init(void)
+#endif
 {
 	/* use default */
 	gd->env_addr	= (ulong)&default_environment[0];
@@ -135,7 +147,11 @@ static inline int write_env(struct mmc *mmc, unsigned long size,
 static unsigned char env_flags;
 #endif
 
+#if defined(CONFIG_ENV_IS_DYNAMIC)
+int mmc_saveenv(void)
+#else
 int saveenv(void)
+#endif
 {
 	ALLOC_CACHE_ALIGN_BUFFER(env_t, env_new, 1);
 	int dev = mmc_get_env_dev();
@@ -200,9 +216,13 @@ static inline int read_env(struct mmc *mmc, unsigned long size,
 	return (n == blk_cnt) ? 0 : -1;
 }
 
-#ifdef CONFIG_ENV_OFFSET_REDUND
+#if defined(CONFIG_ENV_IS_DYNAMIC)
+void mmc_env_relocate_spec(void)
+#else
 void env_relocate_spec(void)
+#endif
 {
+#ifdef CONFIG_ENV_OFFSET_REDUND
 #if !defined(ENV_IS_EMBEDDED)
 	struct mmc *mmc;
 	u32 offset1, offset2;
@@ -215,6 +235,8 @@ void env_relocate_spec(void)
 
 	ALLOC_CACHE_ALIGN_BUFFER(env_t, tmp_env1, 1);
 	ALLOC_CACHE_ALIGN_BUFFER(env_t, tmp_env2, 1);
+
+	env_name_spec = "MMC";
 
 	mmc = find_mmc_device(dev);
 
@@ -240,9 +262,9 @@ void env_relocate_spec(void)
 		     "reading environment; recovered successfully\n");
 
 	crc1_ok = !read1_fail &&
-		(crc32(0, tmp_env1->data, ENV_SIZE) == tmp_env1->crc);
+		(crc32(0, tmp_env1->data, env_size) == tmp_env1->crc);
 	crc2_ok = !read2_fail &&
-		(crc32(0, tmp_env2->data, ENV_SIZE) == tmp_env2->crc);
+		(crc32(0, tmp_env2->data, env_size) == tmp_env2->crc);
 
 	if (!crc1_ok && !crc2_ok) {
 		errmsg = "!bad CRC";
@@ -283,10 +305,7 @@ err:
 	if (ret)
 		set_default_env(errmsg);
 #endif
-}
 #else /* ! CONFIG_ENV_OFFSET_REDUND */
-void env_relocate_spec(void)
-{
 #if !defined(ENV_IS_EMBEDDED)
 	ALLOC_CACHE_ALIGN_BUFFER(char, buf, CONFIG_ENV_SIZE);
 	struct mmc *mmc;
@@ -294,6 +313,8 @@ void env_relocate_spec(void)
 	int ret;
 	int dev = mmc_get_env_dev();
 	const char *errmsg;
+
+	env_name_spec = "MMC";
 
 	mmc = find_mmc_device(dev);
 
@@ -323,5 +344,5 @@ err:
 	if (ret)
 		set_default_env(errmsg);
 #endif
-}
 #endif /* CONFIG_ENV_OFFSET_REDUND */
+}
