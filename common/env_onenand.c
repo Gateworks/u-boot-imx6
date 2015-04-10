@@ -21,8 +21,6 @@
 #include <linux/mtd/mtd.h>
 #include <linux/mtd/onenand.h>
 
-char *env_name_spec = "OneNAND";
-
 #define ONENAND_MAX_ENV_SIZE	CONFIG_ENV_SIZE
 #define ONENAND_ENV_SIZE(mtd)	(ONENAND_MAX_ENV_SIZE - ENV_HEADER_SIZE)
 
@@ -116,6 +114,8 @@ int env_init(void)
 	/* use default */
 	gd->env_addr = (ulong)&default_environment[0];
 	gd->env_valid = 1;
+
+	env_name_spec = "OneNAND";
 
 	return 0;
 }

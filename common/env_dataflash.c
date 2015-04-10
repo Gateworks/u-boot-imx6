@@ -16,8 +16,6 @@ DECLARE_GLOBAL_DATA_PTR;
 
 env_t *env_ptr;
 
-char *env_name_spec = "dataflash";
-
 uchar env_get_char_spec(int index)
 {
 	uchar c;
@@ -84,6 +82,8 @@ int env_init(void)
 	/* use default */
 	gd->env_addr = (ulong)&default_environment[0];
 	gd->env_valid = 1;
+
+	env_name_spec = "dataflash";
 
 	return 0;
 }

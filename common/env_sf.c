@@ -39,8 +39,6 @@ static ulong env_new_offset	= CONFIG_ENV_OFFSET_REDUND;
 
 DECLARE_GLOBAL_DATA_PTR;
 
-char *env_name_spec = "SPI Flash";
-
 static struct spi_flash *env_flash;
 
 #if defined(CONFIG_ENV_OFFSET_REDUND)
@@ -335,6 +333,8 @@ int env_init(void)
 	/* SPI flash isn't usable before relocation */
 	gd->env_addr = (ulong)&default_environment[0];
 	gd->env_valid = 1;
+
+	env_name_spec = "SPI Flash";
 
 	return 0;
 }

@@ -16,18 +16,26 @@
 #include <search.h>
 #include <errno.h>
 
+#if defined(CONFIG_ENV_IS_DYNAMIC)
+# undef CONFIG_ENV_SIZE
+# define CONFIG_ENV_OFFSET		CONFIG_ENV_MMC_OFFSET
+# define CONFIG_ENV_SIZE		CONFIG_ENV_MMC_SIZE
+# if defined(CONFIG_ENV_MMC_OFFSET_REDUND)
+#   define CONFIG_ENV_OFFSET_REDUND	CONFIG_ENV_MMC_OFFSET_REDUND
+# endif
+#else
 #if defined(CONFIG_ENV_SIZE_REDUND) &&  \
 	(CONFIG_ENV_SIZE_REDUND != CONFIG_ENV_SIZE)
 #error CONFIG_ENV_SIZE_REDUND should be the same as CONFIG_ENV_SIZE
 #endif
-
-char *env_name_spec = "MMC";
+#endif /* if defined(CONFIG_ENV_IS_DYNAMIC) */
 
 #ifdef ENV_IS_EMBEDDED
-env_t *env_ptr = &environment;
-#else /* ! ENV_IS_EMBEDDED */
-env_t *env_ptr;
-#endif /* ENV_IS_EMBEDDED */
+static env_t *env_ptr = &environment;
+#elif CONFIG_ENV_OFFSET_REDUND
+static env_t *env_ptr;
+#endif
+extern unsigned int env_size;
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -53,7 +61,11 @@ __weak int mmc_get_env_addr(struct mmc *mmc, int copy, u32 *env_addr)
 	return 0;
 }
 
+#if defined(CONFIG_ENV_IS_DYNAMIC)
+int mmc_env_init(void)
+#else
 int env_init(void)
+#endif
 {
 	/* use default */
 	gd->env_addr	= (ulong)&default_environment[0];
@@ -116,6 +128,9 @@ static inline int write_env(struct mmc *mmc, unsigned long size,
 	blk_start	= ALIGN(offset, mmc->write_bl_len) / mmc->write_bl_len;
 	blk_cnt		= ALIGN(size, mmc->write_bl_len) / mmc->write_bl_len;
 
+	debug("%s: offset=0x%08lx size=0x%08lx\n", __func__, offset, size);
+	debug("%s: blocklen:%dB\n", __func__, mmc->write_bl_len);
+	debug("%s: writing blk:%d cnt:%d\n", __func__, blk_start, blk_cnt);
 	n = mmc->block_dev.block_write(CONFIG_SYS_MMC_ENV_DEV, blk_start,
 					blk_cnt, (u_char *)buffer);
 
@@ -126,7 +141,11 @@ static inline int write_env(struct mmc *mmc, unsigned long size,
 static unsigned char env_flags;
 #endif
 
+#if defined(CONFIG_ENV_IS_DYNAMIC)
+int mmc_saveenv(void)
+#else
 int saveenv(void)
+#endif
 {
 	ALLOC_CACHE_ALIGN_BUFFER(env_t, env_new, 1);
 	ssize_t	len;
@@ -139,14 +158,14 @@ int saveenv(void)
 		return 1;
 
 	res = (char *)&env_new->data;
-	len = hexport_r(&env_htab, '\0', 0, &res, ENV_SIZE, 0, NULL);
+	len = hexport_r(&env_htab, '\0', 0, &res, env_size, 0, NULL);
 	if (len < 0) {
 		error("Cannot export environment: errno = %d\n", errno);
 		ret = 1;
 		goto fini;
 	}
 
-	env_new->crc = crc32(0, &env_new->data[0], ENV_SIZE);
+	env_new->crc = crc32(0, &env_new->data[0], env_size);
 
 #ifdef CONFIG_ENV_OFFSET_REDUND
 	env_new->flags	= ++env_flags; /* increase the serial */
@@ -194,14 +213,21 @@ static inline int read_env(struct mmc *mmc, unsigned long size,
 	blk_start	= ALIGN(offset, mmc->read_bl_len) / mmc->read_bl_len;
 	blk_cnt		= ALIGN(size, mmc->read_bl_len) / mmc->read_bl_len;
 
+	debug("%s: offset=0x%08lx size=0x%08lx\n", __func__, offset, size);
+	debug("%s: blocklen:%dB\n", __func__, mmc->read_bl_len);
+	debug("%s: reading blk:%d cnt:%d\n", __func__, blk_start, blk_cnt);
 	n = mmc->block_dev.block_read(dev, blk_start, blk_cnt, (uchar *)buffer);
 
 	return (n == blk_cnt) ? 0 : -1;
 }
 
-#ifdef CONFIG_ENV_OFFSET_REDUND
+#if defined(CONFIG_ENV_IS_DYNAMIC)
+void mmc_env_relocate_spec(void)
+#else
 void env_relocate_spec(void)
+#endif
 {
+#ifdef CONFIG_ENV_OFFSET_REDUND
 #if !defined(ENV_IS_EMBEDDED)
 	struct mmc *mmc;
 	u32 offset1, offset2;
@@ -214,6 +240,7 @@ void env_relocate_spec(void)
 	ALLOC_CACHE_ALIGN_BUFFER(env_t, tmp_env1, 1);
 	ALLOC_CACHE_ALIGN_BUFFER(env_t, tmp_env2, 1);
 
+	env_name_spec = "MMC";
 #ifdef CONFIG_SPL_BUILD
 	dev = 0;
 #endif
@@ -241,9 +268,9 @@ void env_relocate_spec(void)
 		     "reading environment; recovered successfully\n");
 
 	crc1_ok = !read1_fail &&
-		(crc32(0, tmp_env1->data, ENV_SIZE) == tmp_env1->crc);
+		(crc32(0, tmp_env1->data, env_size) == tmp_env1->crc);
 	crc2_ok = !read2_fail &&
-		(crc32(0, tmp_env2->data, ENV_SIZE) == tmp_env2->crc);
+		(crc32(0, tmp_env2->data, env_size) == tmp_env2->crc);
 
 	if (!crc1_ok && !crc2_ok) {
 		ret = 1;
@@ -282,12 +309,8 @@ fini:
 err:
 	if (ret)
 		set_default_env(NULL);
-
 #endif
-}
 #else /* ! CONFIG_ENV_OFFSET_REDUND */
-void env_relocate_spec(void)
-{
 #if !defined(ENV_IS_EMBEDDED)
 	ALLOC_CACHE_ALIGN_BUFFER(char, buf, CONFIG_ENV_SIZE);
 	struct mmc *mmc;
@@ -295,6 +318,7 @@ void env_relocate_spec(void)
 	int ret;
 	int dev = CONFIG_SYS_MMC_ENV_DEV;
 
+	env_name_spec = "MMC";
 #ifdef CONFIG_SPL_BUILD
 	dev = 0;
 #endif
@@ -325,5 +349,5 @@ err:
 	if (ret)
 		set_default_env(NULL);
 #endif
-}
 #endif /* CONFIG_ENV_OFFSET_REDUND */
+}

@@ -23,6 +23,19 @@
 #include <search.h>
 #include <errno.h>
 
+#if defined(CONFIG_ENV_IS_DYNAMIC)
+# undef CONFIG_ENV_SIZE
+# define CONFIG_ENV_OFFSET		CONFIG_ENV_NAND_OFFSET
+# define CONFIG_ENV_SIZE		CONFIG_ENV_NAND_SIZE
+# if defined(CONFIG_ENV_NAND_OFFSET_REDUND)
+#  define CONFIG_ENV_OFFSET_REDUND	CONFIG_ENV_NAND_OFFSET_REDUND
+# endif
+# if defined(CONFIG_CMD_SAVEENV) && defined(CONFIG_CMD_NAND)
+#  define CMD_SAVEENV
+# elif defined(CONFIG_ENV_NAND_OFFSET_REDUND)
+#  error CONFIG_ENV_NAND_OFFSET_REDUND must have CONFIG_CMD_SAVEENV & CONFIG_CMD_NAND
+# endif
+#else
 #if defined(CONFIG_CMD_SAVEENV) && defined(CONFIG_CMD_NAND)
 #define CMD_SAVEENV
 #elif defined(CONFIG_ENV_OFFSET_REDUND)
@@ -33,20 +46,20 @@
 	(CONFIG_ENV_SIZE_REDUND != CONFIG_ENV_SIZE)
 #error CONFIG_ENV_SIZE_REDUND should be the same as CONFIG_ENV_SIZE
 #endif
+#endif /* if defined(CONFIG_ENV_IS_DYNAMIC) */
 
 #ifndef CONFIG_ENV_RANGE
 #define CONFIG_ENV_RANGE	CONFIG_ENV_SIZE
 #endif
 
-char *env_name_spec = "NAND";
-
 #if defined(ENV_IS_EMBEDDED)
-env_t *env_ptr = &environment;
+static env_t *env_ptr = &environment;
 #elif defined(CONFIG_NAND_ENV_DST)
-env_t *env_ptr = (env_t *)CONFIG_NAND_ENV_DST;
+static env_t *env_ptr = (env_t *)CONFIG_NAND_ENV_DST;
 #else /* ! ENV_IS_EMBEDDED */
-env_t *env_ptr;
+static env_t *env_ptr;
 #endif /* ENV_IS_EMBEDDED */
+extern unsigned int env_size;
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -62,7 +75,11 @@ DECLARE_GLOBAL_DATA_PTR;
  * This way the SPL loads not only the U-Boot image from NAND but
  * also the environment.
  */
+#if defined(CONFIG_ENV_IS_DYNAMIC)
+int nand_env_init(void)
+#else
 int env_init(void)
+#endif
 {
 #if defined(ENV_IS_EMBEDDED) || defined(CONFIG_NAND_ENV_DST)
 	int crc1_ok = 0, crc2_ok = 0;
@@ -72,10 +89,10 @@ int env_init(void)
 	env_t *tmp_env2;
 
 	tmp_env2 = (env_t *)((ulong)env_ptr + CONFIG_ENV_SIZE);
-	crc2_ok = crc32(0, tmp_env2->data, ENV_SIZE) == tmp_env2->crc;
+	crc2_ok = crc32(0, tmp_env2->data, env_size) == tmp_env2->crc;
 #endif
 	tmp_env1 = env_ptr;
-	crc1_ok = crc32(0, tmp_env1->data, ENV_SIZE) == tmp_env1->crc;
+	crc1_ok = crc32(0, tmp_env1->data, env_size) == tmp_env1->crc;
 
 	if (!crc1_ok && !crc2_ok) {
 		gd->env_addr	= 0;
@@ -112,10 +129,10 @@ int env_init(void)
 	gd->env_addr = (ulong)env_ptr->data;
 
 #else /* ENV_IS_EMBEDDED || CONFIG_NAND_ENV_DST */
+	/* use default */
 	gd->env_addr	= (ulong)&default_environment[0];
 	gd->env_valid	= 1;
 #endif /* ENV_IS_EMBEDDED || CONFIG_NAND_ENV_DST */
-
 	return 0;
 }
 
@@ -133,6 +150,8 @@ int writeenv(size_t offset, u_char *buf)
 
 	blocksize = nand_info[0].erasesize;
 	len = min(blocksize, CONFIG_ENV_SIZE);
+	debug("%s offset=0x%08x blocksize=0x%08x len=0x%08x\n",
+	      __func__, offset, blocksize, len);
 
 	while (amount_saved < CONFIG_ENV_SIZE && offset < end) {
 		if (nand_block_isbad(&nand_info[0], offset)) {
@@ -162,6 +181,8 @@ static int erase_and_write_env(const struct env_location *location,
 {
 	int ret = 0;
 
+	debug("%s: %s offset=0x%08x\n", __func__, location->name,
+	      (unsigned int)location->erase_opts.offset);
 	printf("Erasing %s...\n", location->name);
 	if (nand_erase_opts(&nand_info[0], &location->erase_opts))
 		return 1;
@@ -177,7 +198,11 @@ static int erase_and_write_env(const struct env_location *location,
 static unsigned char env_flags;
 #endif
 
+#if defined(CONFIG_ENV_IS_DYNAMIC)
+int nand_saveenv(void)
+#else
 int saveenv(void)
+#endif
 {
 	int	ret = 0;
 	ALLOC_CACHE_ALIGN_BUFFER(env_t, env_new, 1);
@@ -204,16 +229,18 @@ int saveenv(void)
 	};
 
 
+	debug("Writing to %d locations\n", ARRAY_SIZE(location));
+
 	if (CONFIG_ENV_RANGE < CONFIG_ENV_SIZE)
 		return 1;
 
 	res = (char *)&env_new->data;
-	len = hexport_r(&env_htab, '\0', 0, &res, ENV_SIZE, 0, NULL);
+	len = hexport_r(&env_htab, '\0', 0, &res, env_size, 0, NULL);
 	if (len < 0) {
 		error("Cannot export environment: errno = %d\n", errno);
 		return 1;
 	}
-	env_new->crc   = crc32(0, env_new->data, ENV_SIZE);
+	env_new->crc   = crc32(0, env_new->data, env_size);
 #ifdef CONFIG_ENV_OFFSET_REDUND
 	env_new->flags = ++env_flags; /* increase the serial */
 	env_idx = (gd->env_valid == 1);
@@ -250,6 +277,8 @@ int readenv(size_t offset, u_char *buf)
 		return 1;
 
 	len = min(blocksize, CONFIG_ENV_SIZE);
+	debug("%s: offset=0x%08x blocksize=0x%08x len=0x%08x\n",
+	      __func__, offset, blocksize, len);
 
 	while (amount_loaded < CONFIG_ENV_SIZE && offset < end) {
 		if (nand_block_isbad(&nand_info[0], offset)) {
@@ -304,14 +333,19 @@ int get_nand_env_oob(nand_info_t *nand, unsigned long *result)
 }
 #endif
 
-#ifdef CONFIG_ENV_OFFSET_REDUND
+#if defined(CONFIG_ENV_IS_DYNAMIC)
+void nand_env_relocate_spec(void)
+#else
 void env_relocate_spec(void)
+#endif
 {
+#ifdef CONFIG_ENV_OFFSET_REDUND
 #if !defined(ENV_IS_EMBEDDED)
 	int read1_fail = 0, read2_fail = 0;
 	int crc1_ok = 0, crc2_ok = 0;
 	env_t *ep, *tmp_env1, *tmp_env2;
 
+	env_name_spec = "NAND";
 	tmp_env1 = (env_t *)malloc(CONFIG_ENV_SIZE);
 	tmp_env2 = (env_t *)malloc(CONFIG_ENV_SIZE);
 	if (tmp_env1 == NULL || tmp_env2 == NULL) {
@@ -330,9 +364,9 @@ void env_relocate_spec(void)
 		     "reading environment; recovered successfully\n");
 
 	crc1_ok = !read1_fail &&
-		(crc32(0, tmp_env1->data, ENV_SIZE) == tmp_env1->crc);
+		(crc32(0, tmp_env1->data, env_size) == tmp_env1->crc);
 	crc2_ok = !read2_fail &&
-		(crc32(0, tmp_env2->data, ENV_SIZE) == tmp_env2->crc);
+		(crc32(0, tmp_env2->data, env_size) == tmp_env2->crc);
 
 	if (!crc1_ok && !crc2_ok) {
 		set_default_env("!bad CRC");
@@ -370,19 +404,17 @@ done:
 	free(tmp_env2);
 
 #endif /* ! ENV_IS_EMBEDDED */
-}
 #else /* ! CONFIG_ENV_OFFSET_REDUND */
 /*
  * The legacy NAND code saved the environment in the first NAND
  * device i.e., nand_dev_desc + 0. This is also the behaviour using
  * the new NAND code.
  */
-void env_relocate_spec(void)
-{
 #if !defined(ENV_IS_EMBEDDED)
 	int ret;
 	ALLOC_CACHE_ALIGN_BUFFER(char, buf, CONFIG_ENV_SIZE);
 
+	env_name_spec = "NAND";
 #if defined(CONFIG_ENV_OFFSET_OOB)
 	ret = get_nand_env_oob(&nand_info[0], &nand_env_oob_offset);
 	/*
@@ -405,5 +437,5 @@ void env_relocate_spec(void)
 
 	env_import(buf, 1);
 #endif /* ! ENV_IS_EMBEDDED */
-}
 #endif /* CONFIG_ENV_OFFSET_REDUND */
+}

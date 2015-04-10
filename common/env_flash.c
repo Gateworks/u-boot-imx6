@@ -31,8 +31,6 @@ DECLARE_GLOBAL_DATA_PTR;
 #error CONFIG_ENV_SIZE_REDUND should not be less then CONFIG_ENV_SIZE
 #endif
 
-char *env_name_spec = "Flash";
-
 #ifdef ENV_IS_EMBEDDED
 env_t *env_ptr = &environment;
 
@@ -61,6 +59,8 @@ static ulong end_addr_new = CONFIG_ENV_ADDR_REDUND + CONFIG_ENV_SECT_SIZE - 1;
 int env_init(void)
 {
 	int crc1_ok = 0, crc2_ok = 0;
+
+	env_name_spec = "Flash";
 
 	uchar flag1 = flash_addr->flags;
 	uchar flag2 = flash_addr_new->flags;

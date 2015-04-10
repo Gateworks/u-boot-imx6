@@ -41,8 +41,6 @@ env_t *env_ptr;
 env_t *env_ptr = (env_t *)CONFIG_ENV_ADDR;
 #endif
 
-char *env_name_spec = "NVRAM";
-
 #ifdef CONFIG_SYS_NVRAM_ACCESS_ROUTINE
 uchar env_get_char_spec(int index)
 {
@@ -115,6 +113,7 @@ int env_init(void)
 		gd->env_addr	= (ulong)&default_environment[0];
 		gd->env_valid	= 0;
 	}
+	env_name_spec = "NVRAM";
 
 	return 0;
 }

@@ -15,8 +15,6 @@
 #include <ubi_uboot.h>
 #undef crc32
 
-char *env_name_spec = "UBI";
-
 env_t *env_ptr;
 
 DECLARE_GLOBAL_DATA_PTR;
@@ -26,6 +24,8 @@ int env_init(void)
 	/* use default */
 	gd->env_addr = (ulong)&default_environment[0];
 	gd->env_valid = 1;
+
+	env_name_spec = "UBI";
 
 	return 0;
 }

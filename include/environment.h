@@ -21,6 +21,34 @@
  **************************************************************************
  */
 
+/*
+ * dynamic env support - allow multiple storage devices selected per boot device
+ */
+#if defined(CONFIG_ENV_IS_DYNAMIC)
+# if defined(CONFIG_ENV_SIZE)
+#  error "CONFIG_ENV_SIZE will be auto-defined"
+# endif
+# define CONFIG_ENV_SIZE 0
+# if defined(CONFIG_ENV_IS_IN_NAND)
+int nand_env_init(void);
+int nand_saveenv(void);
+void nand_env_relocate_spec(void);
+# if (CONFIG_ENV_NAND_SIZE > CONFIG_ENV_SIZE)
+#  undef CONFIG_ENV_SIZE
+#  define CONFIG_ENV_SIZE CONFIG_ENV_NAND_SIZE
+# endif
+# endif
+# if defined(CONFIG_ENV_IS_IN_MMC)
+int mmc_env_init(void);
+int mmc_saveenv(void);
+void mmc_env_relocate_spec(void);
+# if (CONFIG_ENV_MMC_SIZE > CONFIG_ENV_SIZE)
+#  undef CONFIG_ENV_SIZE
+#  define CONFIG_ENV_SIZE CONFIG_ENV_MMC_SIZE
+# endif
+# endif
+#endif /* defined(CONFIG_ENV_DYNAMIC_NAND) */
+
 #if defined(CONFIG_ENV_IS_IN_FLASH)
 # ifndef	CONFIG_ENV_ADDR
 #  define	CONFIG_ENV_ADDR	(CONFIG_SYS_FLASH_BASE + CONFIG_ENV_OFFSET)
@@ -65,6 +93,11 @@
 # endif
 #endif
 
+#if defined(CONFIG_ENV_IS_DYNAMIC)
+# if defined(CONFIG_ENV_NAND_OFFSET_REDUND) || defined(CONFIG_ENV_MMC_OFFSET_REDUND)
+#   define CONFIG_SYS_REDUNDAND_ENVIRONMENT
+# endif
+#else /* ! defined(CONFIG_ENV_IS_DYNAMIC) */
 #if defined(CONFIG_ENV_IS_IN_NAND)
 # if defined(CONFIG_ENV_OFFSET_OOB)
 #  ifdef CONFIG_ENV_OFFSET_REDUND
@@ -85,6 +118,7 @@ extern unsigned long nand_env_oob_offset;
 #  error "Need to define CONFIG_ENV_SIZE when using CONFIG_ENV_IS_IN_NAND"
 # endif
 #endif /* CONFIG_ENV_IS_IN_NAND */
+#endif /* defined(CONFIG_ENV_IS_DYNAMIC) */
 
 #if defined(CONFIG_ENV_IS_IN_UBI)
 # ifndef CONFIG_ENV_UBI_PART
@@ -161,7 +195,6 @@ extern env_t environment;
 #endif /* ENV_IS_EMBEDDED */
 
 extern const unsigned char default_environment[];
-extern env_t *env_ptr;
 
 extern void env_relocate_spec(void);
 extern unsigned char env_get_char_spec(int);
