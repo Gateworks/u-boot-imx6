@@ -35,9 +35,7 @@
 #include <power/pmic.h>
 #include <power/ltc3676_pmic.h>
 #include <power/pfuze100_pmic.h>
-#include <fdt_support.h>
-#include <jffs2/load_kernel.h>
-#include <spi_flash.h>
+#include <spl.h>
 
 #include "gsc.h"
 #include "ventana_eeprom.h"
@@ -1563,6 +1561,29 @@ int misc_init_r(void)
 		setenv("mem_mb", str);
 	}
 
+	/* create some default commands based on boot medium */
+	if (!getenv("updateuboot")) {
+		char buf[256];
+		buf[0] = 0;
+		switch (spl_boot_device()) {
+		case BOOT_DEVICE_MMC1:
+			sprintf(buf, "tftp ${loadaddr} ventana/u-boot.img && "
+				"mmc erase 0x8a 0x500 && "
+				"mmc write ${loadaddr} 0x8a 0x500");
+			break;
+		case BOOT_DEVICE_NAND:
+			sprintf(buf, "tftp ${loadaddr} ventana/u-boot.img && "
+				"nand erase 0xe00000 0x200000 && "
+				"nand write ${loadaddr} 0xe00000 ${filesize}");
+			break;
+		case BOOT_DEVICE_SATA:
+			sprintf(buf, "tftp ${loadaddr} ventana/u-boot.img && "
+				"sata write ${loadaddr} 0x8a 0x500");
+			break;
+		}
+		if (buf[0])
+			setenv("updateuboot", buf);
+	}
 
 	/* setup baseboard specific GPIO pinmux and config */
 	setup_board_gpio(board_type);
