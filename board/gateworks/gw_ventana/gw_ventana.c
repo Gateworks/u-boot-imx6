@@ -829,10 +829,6 @@ int ft_board_setup(void *blob, bd_t *bd)
 			printf("   Set display timings for %s...\n", display);
 	}
 
-	if (!model) {
-		puts("invalid board info: Leaving FDT fully enabled\n");
-		return 0;
-	}
 	printf("   Adjusting FDT per EEPROM for %s...\n", model);
 
 	/* board serial number */
