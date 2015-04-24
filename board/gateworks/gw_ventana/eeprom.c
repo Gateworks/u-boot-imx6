@@ -14,6 +14,42 @@
 #include "gsc.h"
 #include "ventana_eeprom.h"
 
+/* hexdump - Canonical hex+ASCII display.
+ *
+ * Display the input offset in hexa‐decimal, followed by sixteen
+ * space-separated, two column, hexa‐decimal bytes, followed by the same
+ * sixteen bytes in %_p format enclosed in ``|'' characters.
+ *
+ * @param buf - buffer
+ * @param len - length to dump
+ */
+static void hexdump(unsigned char *buf, int len)
+{
+	int i = 0;
+	char ascii[20];
+
+	ascii[0] = 0;
+	for (i = 0; i < len; i++) {
+		if (0 == (i % 16)) {
+			if (ascii[0]) {
+				ascii[17] = 0;
+				printf("  |%s|\n", ascii);
+				ascii[0] = 0;
+			}
+			printf("%08x ", i);
+		}
+		if (0 == (i % 8))
+			printf(" ");
+		printf("%02x ", buf[i]);
+		ascii[i % 16] = (buf[i] < ' ' || buf[i] > 127) ? '.' : buf[i];
+	}
+	if (len % 16) {
+		for (i = len % 16; i < 16; i++)
+			puts("   ");
+	}
+	printf("  |%s|\n", ascii);
+}
+
 /* read ventana EEPROM, check for validity, and return baseboard type */
 int
 read_eeprom(int bus, struct ventana_board_info *info)
@@ -47,6 +83,7 @@ read_eeprom(int bus, struct ventana_board_info *info)
 	/* sanity checks */
 	if (info->model[0] != 'G' || info->model[1] != 'W') {
 		puts("EEPROM: Invalid Model in EEPROM\n");
+		hexdump(buf, sizeof(*info));
 		return GW_UNKNOWN;
 	}
 
@@ -56,6 +93,7 @@ read_eeprom(int bus, struct ventana_board_info *info)
 	if ((info->chksum[0] != chksum>>8) ||
 	    (info->chksum[1] != (chksum&0xff))) {
 		puts("EEPROM: Failed EEPROM checksum\n");
+		hexdump(buf, sizeof(*info));
 		return GW_UNKNOWN;
 	}
 
@@ -117,6 +155,10 @@ read_eeprom(int bus, struct ventana_board_info *info)
 		else if (info->model[4] == '0' && info->model[5] == '9')
 			type = GW5909;
 		break;
+	}
+	if (type == GW_UNKNOWN) {
+		printf("EEPROM: Unknown model in EEPROM: %s\n", info->model);
+		hexdump(buf, sizeof(*info));
 	}
 	return type;
 }
