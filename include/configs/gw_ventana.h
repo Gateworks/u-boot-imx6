@@ -321,22 +321,7 @@
 /* Persistent Environment Config */
 #define CONFIG_ENV_OVERWRITE    /* allow to overwrite serial and ethaddr */
 #ifdef CONFIG_SPI_FLASH
-#define CONFIG_ENV_IS_IN_SPI_FLASH
-#else
-#define CONFIG_ENV_IS_IN_NAND
-#endif
-#if defined(CONFIG_ENV_IS_IN_MMC)
-  #define CONFIG_SYS_MMC_ENV_DEV         0
-  #define CONFIG_ENV_OFFSET              (709 * SZ_1K)
-  #define CONFIG_ENV_SIZE                (128 * SZ_1K)
-  #define CONFIG_ENV_OFFSET_REDUND       (CONFIG_ENV_OFFSET + (128 * SZ_1K))
-#elif defined(CONFIG_ENV_IS_IN_NAND)
-  #define CONFIG_ENV_OFFSET              (16 * SZ_1M)
-  #define CONFIG_ENV_SECT_SIZE           (128 * SZ_1K)
-  #define CONFIG_ENV_SIZE                CONFIG_ENV_SECT_SIZE
-  #define CONFIG_ENV_OFFSET_REDUND       (CONFIG_ENV_OFFSET + (512 * SZ_1K))
-  #define CONFIG_ENV_SIZE_REDUND         CONFIG_ENV_SIZE
-#elif defined(CONFIG_ENV_IS_IN_SPI_FLASH)
+  #define CONFIG_ENV_IS_IN_SPI_FLASH
   #define CONFIG_ENV_OFFSET		(512 * SZ_1K)
   #define CONFIG_ENV_SECT_SIZE		(64 * SZ_1K)
   #define CONFIG_ENV_SIZE		(8 * SZ_1K)
@@ -344,6 +329,22 @@
   #define CONFIG_ENV_SPI_CS              CONFIG_SF_DEFAULT_CS
   #define CONFIG_ENV_SPI_MODE            CONFIG_SF_DEFAULT_MODE
   #define CONFIG_ENV_SPI_MAX_HZ          CONFIG_SF_DEFAULT_SPEED
+#else
+  /* storage medium dependent on boot device */
+  #define CONFIG_ENV_IS_DYNAMIC
+
+  /* allow env in MMC */
+  #define CONFIG_ENV_IS_IN_MMC
+  #define CONFIG_SYS_MMC_ENV_DEV	0
+  #define CONFIG_ENV_MMC_SIZE		(128 * SZ_1K)
+  #define CONFIG_ENV_MMC_OFFSET		(709 * SZ_1K)
+  #define CONFIG_ENV_MMC_OFFSET_REDUND	(CONFIG_ENV_MMC_OFFSET + (128 * SZ_1K))
+
+  /* allow env in NAND */
+  #define CONFIG_ENV_IS_IN_NAND
+  #define CONFIG_ENV_NAND_SIZE		(128 * SZ_1K)
+  #define CONFIG_ENV_NAND_OFFSET	(16 * SZ_1M)
+  #define CONFIG_ENV_NAND_OFFSET_REDUND	(CONFIG_ENV_NAND_OFFSET + (512 * SZ_1K))
 #endif
 
 /* Environment */
