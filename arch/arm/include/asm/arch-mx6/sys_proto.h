@@ -14,6 +14,7 @@
 #define is_soc_rev(rev)	((get_cpu_rev() & 0xFF) - rev)
 u32 get_cpu_rev(void);
 u32 get_cpu_speed_grade_hz(void);
+u32 get_cpu_temp_grade(int *minc, int *maxc);
 
 /* returns MXC_CPU_ value */
 #define cpu_type(rev) (((rev) >> 12)&0xff)

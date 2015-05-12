@@ -223,6 +223,12 @@
 #if !(defined(__KERNEL_STRICT_NAMES) || defined(__ASSEMBLY__))
 #include <asm/types.h>
 
+/* CPU Temperature Grades */
+#define TEMP_COMMERCIAL         0
+#define TEMP_EXTCOMMERCIAL      1
+#define TEMP_INDUSTRIAL         2
+#define TEMP_AUTOMOTIVE         3
+
 extern void imx_get_mac_from_fuse(int dev_id, unsigned char *mac);
 
 /* System Reset Controller (SRC) */
