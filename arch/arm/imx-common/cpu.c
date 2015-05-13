@@ -148,17 +148,31 @@ const char *get_imx_type(u32 imxtype)
 
 int print_cpuinfo(void)
 {
-	u32 cpurev;
+	u32 cpurev, max_freq;
 	char *reset_cause;
 
 	cpurev = get_cpu_rev();
 	reset_cause = get_reset_cause();
 
+#if defined(CONFIG_MX6)
+	printf("CPU:   Freescale i.MX%s rev%d.%d",
+	       get_imx_type((cpurev & 0xFF000) >> 12),
+	       (cpurev & 0x000F0) >> 4,
+	       (cpurev & 0x0000F) >> 0);
+	max_freq = get_cpu_speed_grade_hz();
+	if (!max_freq || max_freq == mxc_get_clock(MXC_ARM_CLK)) {
+		printf(" at %dMHz\n", mxc_get_clock(MXC_ARM_CLK) / 1000000);
+	} else {
+		printf(" %d MHz (running at %d MHz)\n", max_freq / 1000000,
+		       mxc_get_clock(MXC_ARM_CLK) / 1000000);
+	}
+#else
 	printf("CPU:   Freescale i.MX%s rev%d.%d at %d MHz\n",
 		get_imx_type((cpurev & 0xFF000) >> 12),
 		(cpurev & 0x000F0) >> 4,
 		(cpurev & 0x0000F) >> 0,
 		mxc_get_clock(MXC_ARM_CLK) / 1000000);
+#endif
 
 	printf("Reset cause: %s\n", reset_cause);
 	if (strstr(reset_cause, "WDOG")) {
