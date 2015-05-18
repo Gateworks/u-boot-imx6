@@ -16,6 +16,7 @@
 #include <asm/arch/clock.h>
 #include <asm/arch/sys_proto.h>
 #include <asm/arch/crm_regs.h>
+#include <imx_thermal.h>
 #include <ipu_pixfmt.h>
 #include <thermal.h>
 #include <sata.h>
@@ -143,7 +144,7 @@ const char *get_imx_type(u32 imxtype)
 int print_cpuinfo(void)
 {
 	u32 cpurev, max_freq;
-
+	int minc, maxc;
 #if defined(CONFIG_MX6) && defined(CONFIG_IMX6_THERMAL)
 	struct udevice *thermal_dev;
 	int cpu_tmp, ret;
@@ -163,27 +164,49 @@ int print_cpuinfo(void)
 		printf(" %d MHz (running at %d MHz)\n", max_freq / 1000000,
 		       mxc_get_clock(MXC_ARM_CLK) / 1000000);
 	}
+
+	/* cpu temperature info */
+	puts("CPU:   ");
+
+	/* cpu temperature grade */
+	switch (get_cpu_temp_grade(&minc, &maxc)) {
+	case TEMP_AUTOMOTIVE:
+		puts("Automotive temperature grade ");
+		break;
+	case TEMP_INDUSTRIAL:
+		puts("Industrial temperature grade ");
+		break;
+	case TEMP_EXTCOMMERCIAL:
+		puts("Extended Commercial temperature grade ");
+		break;
+	default:
+		puts("Commercial temperature grade ");
+		break;
+	}
+	printf("(%dC to %dC)", minc, maxc);
+
+#if defined(CONFIG_IMX6_THERMAL)
+	/* current cpu temperature */
+	ret = uclass_get_device(UCLASS_THERMAL, 0, &thermal_dev);
+	if (!ret) {
+		ret = thermal_get_temp(thermal_dev, &cpu_tmp);
+
+		if (!ret)
+			printf(" at %dC", cpu_tmp);
+		else
+			puts(" - invalid sensor data");
+	} else {
+		puts(" - invalid sensor device");
+	}
+#endif /* #if defined(CONFIG_IMX6_THERMAL) */
+	puts("\n");
 #else
 	printf("CPU:   Freescale i.MX%s rev%d.%d at %d MHz\n",
 		get_imx_type((cpurev & 0xFF000) >> 12),
 		(cpurev & 0x000F0) >> 4,
 		(cpurev & 0x0000F) >> 0,
 		mxc_get_clock(MXC_ARM_CLK) / 1000000);
-#endif
-
-#if defined(CONFIG_MX6) && defined(CONFIG_IMX6_THERMAL)
-	ret = uclass_get_device(UCLASS_THERMAL, 0, &thermal_dev);
-	if (!ret) {
-		ret = thermal_get_temp(thermal_dev, &cpu_tmp);
-
-		if (!ret)
-			printf("CPU:   Temperature %d C\n", cpu_tmp);
-		else
-			printf("CPU:   Temperature: invalid sensor data\n");
-	} else {
-		printf("CPU:   Temperature: Can't find sensor device\n");
-	}
-#endif
+#endif /* #if defined(CONFIG_MX6) */
 
 	printf("Reset cause: %s\n", get_reset_cause());
 	return 0;
