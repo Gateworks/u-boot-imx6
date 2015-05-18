@@ -150,6 +150,7 @@ int print_cpuinfo(void)
 {
 	u32 cpurev, max_freq;
 	char *reset_cause;
+	int minc, maxc;
 
 	cpurev = get_cpu_rev();
 	reset_cause = get_reset_cause();
@@ -166,6 +167,26 @@ int print_cpuinfo(void)
 		printf(" %d MHz (running at %d MHz)\n", max_freq / 1000000,
 		       mxc_get_clock(MXC_ARM_CLK) / 1000000);
 	}
+
+	/* cpu temperature info */
+	puts("CPU:   ");
+
+	/* cpu temperature grade */
+	switch (get_cpu_temp_grade(&minc, &maxc)) {
+	case TEMP_AUTOMOTIVE:
+		puts("Automotive temperature grade ");
+		break;
+	case TEMP_INDUSTRIAL:
+		puts("Industrial temperature grade ");
+		break;
+	case TEMP_EXTCOMMERCIAL:
+		puts("Extended Commercial temperature grade ");
+		break;
+	default:
+		puts("Commercial temperature grade ");
+		break;
+	}
+	printf("(%dC to %dC)\n", minc, maxc);
 #else
 	printf("CPU:   Freescale i.MX%s rev%d.%d at %d MHz\n",
 		get_imx_type((cpurev & 0xFF000) >> 12),
