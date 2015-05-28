@@ -797,6 +797,27 @@ static int ft_sethdmiinfmt(void *blob, char *mode)
 	return 0;
 }
 
+/* disable a property of a node if the node is found */
+static inline void ft_disable_path(void *blob, const char *path)
+{
+	int i = fdt_path_offset(blob, path);
+	if (i) {
+		debug("disabling %s\n", path);
+		fdt_status_disabled(blob, i);
+	}
+}
+
+/* remove a property of a node if the node is found */
+static inline void ft_delprop_path(void *blob, const char *path,
+				   const char *name)
+{
+	int i = fdt_path_offset(blob, path);
+	if (i) {
+		debug("removing %s/%s\n", path, name);
+		fdt_delprop(blob, i, name);
+	}
+}
+
 /* return the 'compatible' property of a cpu regulator */
 static inline const char *get_cpureg(void *blob, const char *name)
 {
@@ -824,6 +845,8 @@ static inline const char *get_cpureg(void *blob, const char *name)
  *  - board (full model from EEPROM)
  *  - peripherals removed from DTB if not loaded on board (per EEPROM config)
  */
+#define WDOG1_PATH	"/soc/aips-bus@02000000/wdog@020bc000"
+#define WDOG2_PATH	"/soc/aips-bus@02000000/wdog@020c0000"
 int ft_board_setup(void *blob, bd_t *bd)
 {
 	struct ventana_board_info *info = &ventana_info;
@@ -885,77 +908,112 @@ int ft_board_setup(void *blob, bd_t *bd)
 				    "/soc/aips-bus@02100000/serial@021ec000");
 		if (i)
 			fdt_del_node(blob, i);
+
+		/* GW54xx revE uses WDOG2_B as an external reset */
+		if (rev < 'E')
+			ft_delprop_path(blob, WDOG2_PATH, "ext-reset-output");
 	}
 
-	/*
-	 * disable wdog1/wdog2 nodes for GW51xx below revC to work around
-	 * errata causing wdog timer to be unreliable.
-	 */
-	if (board_type == GW51xx && rev >= 'A' && rev < 'C') {
-		i = fdt_path_offset(blob,
-				    "/soc/aips-bus@02000000/wdog@020bc000");
-		if (i)
-			fdt_status_disabled(blob, i);
+	else if (board_type == GW53xx) {
+		/* GW53xx revF uses WDOG1_B as an external reset */
+		if (rev < 'F')
+			ft_delprop_path(blob, WDOG1_PATH, "ext-reset-output");
 	}
 
-	/* GW522x Uses GPIO3_IO23 instead of GPIO1_IO29 */
-	else if (board_type == GW52xx && info->model[4] == '2') {
-		u32 handle = 0;
-		u32 *range = NULL;
+	else if (board_type == GW51xx) {
+		/*
+		 * disable watchdog for GW51xx below revC to work around
+		 * errata causing wdog timer to be unreliable.
+		 */
+		if (rev >= 'A' && rev < 'C')
+			ft_disable_path(blob, WDOG1_PATH);
 
-		i = fdt_node_offset_by_compatible(blob, -1, "fsl,imx6q-pcie");
-		if (i)
-			range = (u32 *)fdt_getprop(blob, i, "reset-gpio",
-						   NULL);
+		/* GW51xx revE uses WDOG1_B as an external reset */
+		if (rev < 'E')
+			ft_delprop_path(blob, WDOG1_PATH, "ext-reset-output");
+	}
 
-		if (range) {
-			i = fdt_path_offset(blob,
-					    "/soc/aips-bus@02000000/gpio@020a4000");
+	else if (board_type == GW52xx) {
+		/* GW522x Uses GPIO3_IO23 instead of GPIO1_IO29 */
+		if (info->model[4] == '2') {
+			u32 handle = 0;
+			u32 *range = NULL;
+
+			i = fdt_node_offset_by_compatible(blob, -1,
+							  "fsl,imx6q-pcie");
 			if (i)
-				handle = fdt_get_phandle(blob, i);
-			if (handle) {
-				range[0] = cpu_to_fdt32(handle);
-				range[1] = cpu_to_fdt32(23);
+				range = (u32 *)fdt_getprop(blob, i,
+							   "reset-gpio", NULL);
+
+			if (range) {
+				i = fdt_path_offset(blob,
+						    "/soc/aips-bus@02000000/gpio@020a4000");
+				if (i)
+					handle = fdt_get_phandle(blob, i);
+				if (handle) {
+					range[0] = cpu_to_fdt32(handle);
+					range[1] = cpu_to_fdt32(23);
+				}
 			}
 		}
+
+		/* GW520x revE uses WDOG1_B as an external reset */
+		if (info->model[4] == '0' && rev < 'E')
+			ft_delprop_path(blob, WDOG1_PATH, "ext-reset-output");
+
+		/* GW522x revB uses WDOG1_B as an external reset */
+		if (info->model[4] == '2' && rev < 'B')
+			ft_delprop_path(blob, WDOG1_PATH, "ext-reset-output");
 	}
 
-	/*
-	 * isolate CSI0_DATA_EN for GW551x below revB to work around
-	 * errata causing non functional digital video in (it is not hooked up)
-	 */
-	else if (board_type == GW551x && rev == 'A') {
-		u32 *range = NULL;
-		int len;
-		const u32 *handle = NULL;
+	else if (board_type == GW551x) {
+		/*
+		 * isolate CSI0_DATA_EN for GW551x below revB to work around
+		 * errata causing non functional digital video in (it is not hooked up)
+		 */
+		if (rev == 'A') {
+			u32 *range = NULL;
+			int len;
+			const u32 *handle = NULL;
 
-		i = fdt_node_offset_by_compatible(blob, -1,
+			i = fdt_node_offset_by_compatible(blob, -1,
 						  "fsl,imx-tda1997x-video");
-		if (i)
-			handle = fdt_getprop(blob, i, "pinctrl-0", NULL);
-		if (handle)
-			i = fdt_node_offset_by_phandle(blob,
-						       fdt32_to_cpu(*handle));
-		if (i)
-			range = (u32 *)fdt_getprop(blob, i, "fsl,pins", &len);
-		if (range) {
-			len /= sizeof(u32);
-			for (i = 0; i < len; i += 6) {
-				u32 mux_reg = fdt32_to_cpu(range[i+0]);
-				u32 conf_reg = fdt32_to_cpu(range[i+1]);
-				/* mux PAD_CSI0_DATA_EN to GPIO */
-				if (is_cpu_type(MXC_CPU_MX6Q) &&
-				    mux_reg == 0x260 && conf_reg == 0x630)
-					range[i+3] = cpu_to_fdt32(0x5);
-				else if (!is_cpu_type(MXC_CPU_MX6Q) &&
-				    mux_reg == 0x08c && conf_reg == 0x3a0)
-					range[i+3] = cpu_to_fdt32(0x5);
+			if (i)
+				handle = fdt_getprop(blob, i, "pinctrl-0", NULL);
+			if (handle)
+				i = fdt_node_offset_by_phandle(blob,
+							       fdt32_to_cpu(*handle));
+			if (i)
+				range = (u32 *)fdt_getprop(blob, i, "fsl,pins", &len);
+			if (range) {
+				len /= sizeof(u32);
+				for (i = 0; i < len; i += 6) {
+					u32 mux_reg = fdt32_to_cpu(range[i+0]);
+					u32 conf_reg = fdt32_to_cpu(range[i+1]);
+					/* mux PAD_CSI0_DATA_EN to GPIO */
+					if (is_cpu_type(MXC_CPU_MX6Q) &&
+					    mux_reg == 0x260 && conf_reg == 0x630)
+						range[i+3] = cpu_to_fdt32(0x5);
+					else if (!is_cpu_type(MXC_CPU_MX6Q) &&
+					    mux_reg == 0x08c && conf_reg == 0x3a0)
+						range[i+3] = cpu_to_fdt32(0x5);
+				}
+				fdt_setprop_inplace(blob, i, "fsl,pins", range, len);
 			}
-			fdt_setprop_inplace(blob, i, "fsl,pins", range, len);
+
+			/* set BT656 video format */
+			ft_sethdmiinfmt(blob, "yuv422bt656");
 		}
 
-		/* set BT656 video format */
-		ft_sethdmiinfmt(blob, "yuv422bt656");
+		/* GW551x revC uses WDOG1_B as an external reset */
+		if (rev < 'C')
+			ft_delprop_path(blob, WDOG1_PATH, "ext-reset-output");
+	}
+
+	else if (board_type == GW552x) {
+		/* GW552x revC uses WDOG1_B as an external reset */
+		if (rev < 'C')
+			ft_delprop_path(blob, WDOG1_PATH, "ext-reset-output");
 	}
 
 	if (!strcmp("fsl,anatop-regulator", get_cpureg(blob, "arm-supply")) &&
