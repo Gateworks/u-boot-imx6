@@ -899,6 +899,12 @@ int ft_board_setup(void *blob, bd_t *bd)
 	/* set desired digital video capture format */
 	ft_sethdmiinfmt(blob, getenv("hdmiinfmt"));
 
+	/* if arm/soc/pu regulators are imx6 anatop regs we are using LDO's */
+	if (!strcmp("fsl,anatop-regulator", get_cpureg(blob, "arm-supply")) &&
+	    !strcmp("fsl,anatop-regulator", get_cpureg(blob, "pu-supply")) &&
+	    !strcmp("fsl,anatop-regulator", get_cpureg(blob, "soc-supply")))
+		ldo_enabled = 1;
+
 	/*
 	 * disable serial2 node for GW54xx for compatibility with older
 	 * 3.10.x kernel that improperly had this node enabled in the DT
@@ -915,6 +921,10 @@ int ft_board_setup(void *blob, bd_t *bd)
 	}
 
 	else if (board_type == GW53xx) {
+		/* bump ldo-bypass IMX6Q 1GHZ ARM operating point to 1.31V */
+		if (rev < 'E' && is_cpu_type(MXC_CPU_MX6Q) && !ldo_enabled)
+			fdt_fixup_opp(blob, "/cpus/cpu@0", 996000, 1310000);
+
 		/* GW53xx revF uses WDOG1_B as an external reset */
 		if (rev < 'F')
 			ft_delprop_path(blob, WDOG1_PATH, "ext-reset-output");
@@ -1016,10 +1026,6 @@ int ft_board_setup(void *blob, bd_t *bd)
 			ft_delprop_path(blob, WDOG1_PATH, "ext-reset-output");
 	}
 
-	if (!strcmp("fsl,anatop-regulator", get_cpureg(blob, "arm-supply")) &&
-	    !strcmp("fsl,anatop-regulator", get_cpureg(blob, "pu-supply")) &&
-	    !strcmp("fsl,anatop-regulator", get_cpureg(blob, "soc-supply")))
-		ldo_enabled = 1;
 	printf("   Config LDO-%s mode\n", ldo_enabled ? "enabled" : "bypass");
 	adjust_pmic(ldo_enabled);
 
