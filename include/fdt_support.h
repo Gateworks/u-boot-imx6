@@ -72,6 +72,19 @@ void fdt_fixup_crypto_node(void *blob, int sec_rev);
 static inline void fdt_fixup_crypto_node(void *blob, int sec_rev) {}
 #endif
 
+/**
+ * Update Operating Performance Points or OPPs
+ *
+ * see kernel Documentation/devicetree/bindings/power/opp.txt
+ *
+ * @param fdt		FDT blob to update
+ * @param node		node patch within dt
+ * @param freq		frequency in kHz of operationg point to update
+ * @param vol		voltage in mV of operating point to set
+ * @return 1 if ok, 0 if opp not found, or -FDT_ERR_... on error
+ */
+int fdt_fixup_opp(void *fdt, const char *node, u32 freq, u32 vol);
+
 #ifdef CONFIG_PCI
 #include <pci.h>
 int fdt_pci_dma_ranges(void *blob, int phb_off, struct pci_controller *hose);

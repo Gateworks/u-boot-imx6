@@ -1589,3 +1589,38 @@ int fdt_fixup_display(void *blob, const char *path, const char *display)
 	}
 	return toff;
 }
+
+/* Update operating point voltage */
+int fdt_fixup_opp(void *fdt, const char *path, u32 freq, u32 vol)
+{
+	int off, len, i;
+	fdt32_t *val;
+
+	off = fdt_path_offset(fdt, path);
+	if (off < 0)
+		return off;
+
+	val = (fdt32_t *)fdt_getprop(fdt, off, "operating-points", &len);
+
+	/* Check if property exists */
+	if (!val)
+		return len;
+
+	/* Check if property is long enough */
+	if (len < sizeof(uint32_t))
+		return 0;
+
+	/* iterate over tuple of freq+volt pairs looking for match */
+	for (i = 0; i < (len / sizeof(u32)); i += 2) {
+		u32 _freq = fdt32_to_cpu(val[i+0]);
+		u32 _vol = fdt32_to_cpu(val[i+1]);
+		debug(" opp%d: %dkHz %duV\n", i, _freq, _vol);
+		if (freq == fdt32_to_cpu(val[i+0])) {
+			val[i+1] = cpu_to_fdt32(vol);
+			debug("  bumped %dkHz opp from %dmV to %dmV\n",
+			      _freq, _vol, fdt32_to_cpu(val[i+1]));
+			return 1;
+		}
+	}
+	return fdt32_to_cpu(*val);
+}
