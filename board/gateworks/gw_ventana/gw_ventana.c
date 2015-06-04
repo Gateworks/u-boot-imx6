@@ -58,8 +58,7 @@ static iomux_v3_cfg_t const usdhc3_pads[] = {
 	IOMUX_PADS(PAD_SD3_DAT1__SD3_DATA1 | MUX_PAD_CTRL(USDHC_PAD_CTRL)),
 	IOMUX_PADS(PAD_SD3_DAT2__SD3_DATA2 | MUX_PAD_CTRL(USDHC_PAD_CTRL)),
 	IOMUX_PADS(PAD_SD3_DAT3__SD3_DATA3 | MUX_PAD_CTRL(USDHC_PAD_CTRL)),
-	/* CD */
-	IOMUX_PADS(PAD_SD3_DAT5__GPIO7_IO00  | MUX_PAD_CTRL(IRQ_PAD_CTRL)),
+	IOMUX_PADS(PAD_SD3_DAT5__GPIO7_IO00  | MUX_PAD_CTRL(USDHC_PAD_CTRL)),
 };
 
 /* ENET */
@@ -847,6 +846,7 @@ static inline const char *get_cpureg(void *blob, const char *name)
  */
 #define WDOG1_PATH	"/soc/aips-bus@02000000/wdog@020bc000"
 #define WDOG2_PATH	"/soc/aips-bus@02000000/wdog@020c0000"
+#define USDHC3_PATH	"/soc/aips-bus@02100000/usdhc@02198000"
 int ft_board_setup(void *blob, bd_t *bd)
 {
 	struct ventana_board_info *info = &ventana_info;
@@ -1021,9 +1021,20 @@ int ft_board_setup(void *blob, bd_t *bd)
 	}
 
 	else if (board_type == GW552x) {
+		/* these have broken usd_vsel */
+		if (strstr((const char *)info->model, "SP318-B") ||
+		    strstr((const char *)info->model, "SP331-B"))
+			gpio_cfg[board_type].usd_vsel = 0;
+
 		/* GW552x revC uses WDOG1_B as an external reset */
 		if (rev < 'C')
 			ft_delprop_path(blob, WDOG1_PATH, "ext-reset-output");
+	}
+
+	/* remove no-1-8-v if UHS-I support is present */
+	if (gpio_cfg[board_type].usd_vsel) {
+		debug("Enabling UHS-I support\n");
+		ft_delprop_path(blob, USDHC3_PATH, "no-1-8-v");
 	}
 
 	printf("   Config LDO-%s mode\n", ldo_enabled ? "enabled" : "bypass");
