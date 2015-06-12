@@ -24,12 +24,6 @@
 #include <dm.h>
 #include <imx_thermal.h>
 
-enum ldo_reg {
-	LDO_ARM,
-	LDO_SOC,
-	LDO_PU,
-};
-
 struct scu_regs {
 	u32	ctrl;
 	u32	config;
@@ -257,7 +251,7 @@ static void clear_ldo_ramp(void)
  * Possible values are from 0.725V to 1.450V in steps of
  * 0.025V (25mV).
  */
-static int set_ldo_voltage(enum ldo_reg ldo, u32 mv)
+int set_ldo_voltage(enum ldo_reg ldo, u32 mv)
 {
 	struct anatop_regs *anatop = (struct anatop_regs *)ANATOP_BASE_ADDR;
 	u32 val, step, old, reg = readl(&anatop->reg_core);

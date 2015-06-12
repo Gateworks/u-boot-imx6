@@ -19,6 +19,15 @@ u32 get_cpu_rev(void);
 u32 get_cpu_speed_grade_hz(void);
 u32 get_cpu_temp_grade(int *minc, int *maxc);
 
+/* internal anatop LDO regulators */
+enum ldo_reg {
+	LDO_ARM,
+	LDO_SOC,
+	LDO_PU,
+};
+/* set internal anatop LDO regulator */
+int set_ldo_voltage(enum ldo_reg ldo, u32 mv);
+
 /* returns MXC_CPU_ value */
 #define cpu_type(rev) (((rev) >> 12)&0xff)
 
