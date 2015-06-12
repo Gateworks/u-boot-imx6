@@ -780,7 +780,7 @@ void setup_board_gpio(int board, struct ventana_board_info *info)
 	}
 }
 
-/* setup board specific PMIC */
+/* setup initial board specific PMIC */
 void setup_pmic(void)
 {
 	struct pmic *p;
@@ -818,32 +818,81 @@ void setup_pmic(void)
 		p = pmic_get("LTC3676_PMIC");
 		if (p && !pmic_probe(p)) {
 			puts("PMIC:  LTC3676\n");
-			/*
-			 * set board-specific scalar for max CPU frequency
-			 * per CPU based on the LDO enabled Operating Ranges
-			 * defined in the respective IMX6DQ and IMX6SDL
-			 * datasheets. The voltage resulting from the R1/R2
-			 * feedback inputs on Ventana is 1308mV. Note that this
-			 * is a bit shy of the Vmin of 1350mV in the datasheet
-			 * for LDO enabled mode but is as high as we can go.
-			 *
-			 * We will rely on an OS kernel driver to properly
-			 * regulate these per CPU operating point and use LDO
-			 * bypass mode when using the higher frequency
-			 * operating points to compensate as LDO bypass mode
-			 * allows the rails be 125mV lower.
-			 */
-			/* mask PGOOD during SW1 transition */
-			pmic_reg_write(p, LTC3676_DVB1B,
-				       0x1f | LTC3676_PGOOD_MASK);
-			/* set SW1 (VDD_SOC) */
-			pmic_reg_write(p, LTC3676_DVB1A, 0x1f);
 
-			/* mask PGOOD during SW3 transition */
-			pmic_reg_write(p, LTC3676_DVB3B,
-				       0x1f | LTC3676_PGOOD_MASK);
-			/* set SW3 (VDD_ARM) */
-			pmic_reg_write(p, LTC3676_DVB3A, 0x1f);
+			/* Mask PGOOD during voltage transitions */
+			pmic_reg_read(p, LTC3676_DVB1B, &reg);
+			reg |= LTC3676_PGOOD_MASK;
+			pmic_reg_write(p, LTC3676_DVB1B, reg);
+			pmic_reg_read(p, LTC3676_DVB3B, &reg);
+			reg |= LTC3676_PGOOD_MASK;
+			pmic_reg_write(p, LTC3676_DVB3B, reg);
 		}
 	}
+}
+
+/*
+ * adjust PMIC rails depending on ldo-bypass or ldo-enabled mode:
+ *
+ * Because the IMX6 VDD_ARM and VDD_SOC rails have minimum values in
+ * ldo-enabled mode which can exceed the maximum values when in
+ * ldo-bypass mode we must alter the rails depending on which mode is desired.
+ *
+ * Because ldo mode is very dependent on kernel support we can examine
+ * the device-tree to decide if the kernel uses ldo-bypass mode.
+ *
+ * ldo-bypass mode min/max values at 800MHz:
+ *  IMX6DQ:  VDDARM: 1.150v - 1.30v
+ *  IMX6DQ:  VDDSOC: 1.150v - 1.30v
+ *  IMX6SDL: VDDARM: 1.150v - 1.30v
+ *  IMX6SDL: VDDSOC: 1.150v - 1.21v <--- exceeding this causes PCIe aborts
+ *
+ * ldo-enabled mode min/max values at 800Mhz are 125mV above the ldo-bypass
+ * values.
+ */
+int adjust_pmic(char ldo_enabled)
+{
+	struct pmic *p;
+	u32 reg;
+
+	debug("%s ldo_%s\n", __func__, ldo_enabled ? "enabled" : "bypass");
+	i2c_set_bus_num(CONFIG_I2C_PMIC);
+
+	/* configure LTC3676 PMIC */
+	if (!i2c_probe(CONFIG_POWER_LTC3676_I2C_ADDR)) {
+		p = pmic_get("LTC3676_PMIC");
+		if (!p)
+			return 0;
+
+		debug("Adjusting %s for ldo-%sabled\n", p->name,
+		      ldo_enabled ? "en" : "dis");
+
+		/*
+		 * if ldo_enabled mode bump the default 1.185v rails
+		 * to 1.308v max
+		 */
+		if (ldo_enabled) {
+			/* SW1: VDD_SOC */
+			pmic_reg_read(p, LTC3676_DVB1A, &reg);
+			reg |= 0x1f;
+			pmic_reg_write(p, LTC3676_DVB1A, reg);
+			pmic_reg_read(p, LTC3676_DVB1B, &reg);
+			reg |= 0x1f;
+			pmic_reg_write(p, LTC3676_DVB1B, reg);
+			/* SW3: VDD_ARM */
+			pmic_reg_read(p, LTC3676_DVB3A, &reg);
+			reg |= 0x1f;
+			pmic_reg_write(p, LTC3676_DVB3A, reg);
+			pmic_reg_read(p, LTC3676_DVB3B, &reg);
+			reg |= 0x1f;
+			pmic_reg_write(p, LTC3676_DVB3B, reg);
+		} else {
+			/* set max value to bypass FET's */
+			debug("bypassing LDO's\n");
+			set_ldo_voltage(LDO_ARM, 1500);
+			set_ldo_voltage(LDO_PU, 1500);
+			set_ldo_voltage(LDO_SOC, 1500);
+		}
+	}
+
+	return 1;
 }

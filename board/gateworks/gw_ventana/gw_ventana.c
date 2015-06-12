@@ -797,6 +797,24 @@ static int ft_sethdmiinfmt(void *blob, char *mode)
 	return 0;
 }
 
+/* return the 'compatible' property of a cpu regulator */
+static inline const char *get_cpureg(void *blob, const char *name)
+{
+	const u32 *handle = NULL;
+	int i, len = 0;
+	const char *s = NULL;
+
+	i = fdt_path_offset(blob, "/cpus/cpu@0");
+	if (i)
+		handle = fdt_getprop(blob, i, name, NULL);
+	if (handle)
+		i = fdt_node_offset_by_phandle(blob, fdt32_to_cpu(*handle));
+	if (i)
+		s = (char *)fdt_getprop(blob, i, "compatible", &len);
+	debug("%s:%s\n", name, s);
+	return s;
+}
+
 /*
  * called prior to booting kernel or by 'fdt boardsetup' command
  *
@@ -817,7 +835,7 @@ int ft_board_setup(void *blob, bd_t *bd)
 	const char *model = getenv("model");
 	const char *display = getenv("display");
 	int i;
-	char rev = 0;
+	char rev = 0, ldo_enabled = 0;
 
 	/* determine board revision */
 	for (i = sizeof(ventana_info.model) - 1; i > 0; i--) {
@@ -939,6 +957,13 @@ int ft_board_setup(void *blob, bd_t *bd)
 		/* set BT656 video format */
 		ft_sethdmiinfmt(blob, "yuv422bt656");
 	}
+
+	if (!strcmp("fsl,anatop-regulator", get_cpureg(blob, "arm-supply")) &&
+	    !strcmp("fsl,anatop-regulator", get_cpureg(blob, "pu-supply")) &&
+	    !strcmp("fsl,anatop-regulator", get_cpureg(blob, "soc-supply")))
+		ldo_enabled = 1;
+	printf("   Config LDO-%s mode\n", ldo_enabled ? "enabled" : "bypass");
+	adjust_pmic(ldo_enabled);
 
 	/*
 	 * Peripheral Config:

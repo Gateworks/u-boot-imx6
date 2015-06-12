@@ -84,8 +84,9 @@ extern struct ventana gpio_cfg[GW_UNKNOWN];
 void setup_ventana_i2c(void);
 /* configure uart iomux */
 void setup_iomux_uart(void);
-/* conifgure PMIC */
+/* configure PMIC */
 void setup_pmic(void);
+int adjust_pmic(char ldo_enabled);
 /* configure gpio iomux/defaults */
 void setup_iomux_gpio(int board, struct ventana_board_info *);
 /* late setup of GPIO (configuration per baseboard and env) */
