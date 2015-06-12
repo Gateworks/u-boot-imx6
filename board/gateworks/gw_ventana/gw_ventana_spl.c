@@ -566,9 +566,10 @@ int spl_start_uboot(void)
 	if (getenv_yesno("boot_os") == 1)
 		ret = 0;
 #endif
-	if (!ret)
+	if (!ret) {
 		gsc_boot_wd_disable();
-
+		adjust_pmic((getenv_yesno("ldo-bypass") == 1) ? 0 : 1);
+	}
 	debug("%s booting %s\n", __func__, ret ? "uboot" : "linux");
 	return ret;
 }
