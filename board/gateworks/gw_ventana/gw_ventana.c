@@ -829,10 +829,127 @@ static inline const char *get_cpureg(void *blob, const char *name)
 		handle = fdt_getprop(blob, i, name, NULL);
 	if (handle)
 		i = fdt_node_offset_by_phandle(blob, fdt32_to_cpu(*handle));
-	if (i)
+	if (i) {
 		s = (char *)fdt_getprop(blob, i, "compatible", &len);
+		if (!s) {
+			i = fdt_parent_offset(blob, i);
+			i = fdt_parent_offset(blob, i);
+			s = (char *)fdt_getprop(blob, i, "compatible", &len);
+		}
+	}
 	debug("%s:%s\n", name, s);
 	return s;
+}
+
+static int dt_find_regulator(void *blob, int offset, const char *name)
+{
+	int i, len;
+	const char *n;
+
+	offset = fdt_first_subnode(blob, offset);
+	if (offset) {
+		fdt_for_each_subnode(blob, i, offset) {
+			n = fdt_getprop(blob, i, "regulator-name", &len);
+			if (strcmp(name, n) == 0)
+				return i;
+		}
+	}
+
+	return -FDT_ERR_NOTFOUND;
+}
+
+/* Enable LDO-bypass mode by manipulating device-tree cpu0 reguatlors
+ *
+ * This requires the following
+ * (which the Gateworks downstream vendor kernel have):
+ * - gpc: ldo-bypass property
+ * - ltc3676/pfuze100 driver with vddarm and vddsoc named regulators
+ *
+ * Returns: 0 on success, -EINVAL if dt does not support ldo-bypass
+ */
+static int disable_dt_ldo(void *blob)
+{
+	int i, cpu, gpc, gpu, vpu, pmic;
+	const u32 *bypass = 0;
+	int len;
+	u32 reg_arm = 0, reg_soc = 0, reg_pu = 0;
+
+	debug("%s\n", __func__);
+
+	/* get necessary dt nodes */
+	gpc = fdt_node_offset_by_compatible(blob, -1, "fsl,imx6q-gpc");
+	if (gpc < 0)
+		debug("%s: can't find gpc\n", __func__);
+	cpu = fdt_node_offset_by_compatible(blob, -1, "arm,cortex-a9");
+	if (cpu < 0)
+		debug("%s: can't find cpu\n", __func__);
+	vpu = fdt_node_offset_by_compatible(blob, -1, "fsl,imx6-vpu");
+	if (vpu < 0)
+		debug("%s: can't find vpu\n", __func__);
+	gpu = fdt_node_offset_by_compatible(blob, -1, "fsl,imx6q-gpu");
+	if (gpu < 0)
+		debug("%s: can't find gpu\n", __func__);
+	pmic = fdt_node_offset_by_compatible(blob, -1, "lltc,ltc3676");
+	if (pmic < 0)
+		pmic = fdt_node_offset_by_compatible(blob, -1, "fsl,pfuze100");
+	if (pmic < 0)
+		debug("%s: can't find LTC3676/PFUZE100 pmic\n", __func__);
+	if (gpc >= 0)
+		bypass = fdt_getprop(blob, gpc, "fsl,ldo-bypass", &len);
+
+	/*
+	 * Get PMIC VDD_ARM/VDD_SOC regulators
+	 * Note: this requires the PMIC regulators to be named
+	 */
+	i = dt_find_regulator(blob, pmic, "vddarm");
+	if (i > 0)
+		reg_arm = fdt_get_phandle(blob, i);
+	i = dt_find_regulator(blob, pmic, "vddsoc");
+	if (i > 0)
+		reg_soc = fdt_get_phandle(blob, i);
+	/* pu_dummy only exists on fsl 3.10.x kernels */
+	i = fdt_node_offset_by_compatible(blob, -1, "fsl,imx6-dummy-pureg");
+	if (i > 0) {
+		reg_pu = fdt_get_phandle(blob, i);
+		/* if pu_dummy exists, we need a handle to it */
+		if (!reg_pu) {
+			debug("%s failed - missing reg_pu handle\n", __func__);
+			return -EINVAL;
+		}
+	}
+
+	/* make sure we have a dt that supports ldo-bypass */
+	if (!gpc || !cpu || !vpu || !gpu || !pmic) {
+		debug("%s failed - missing gpc|cpu|vpu|gpu|pmic nodes\n",
+		      __func__);
+		return -EINVAL;
+	}
+	/* make sure we can switch to ldo-bypass: have pmic reg handles */
+	if (!reg_arm || !reg_soc || !bypass) {
+		debug("%s failed - missing reg_arm|reg_soc|bypass\n", __func__);
+		return -EINVAL;
+	}
+
+	if (fdt32_to_cpu(*bypass)) {
+		debug("%s LDO already bypassed\n", __func__);
+		return -EINVAL;
+	}
+
+	/* set cpu arm-supply and soc-supply to PMIC regulators */
+	fdt_setprop_inplace_u32(blob, cpu, "arm-supply", reg_arm);
+	fdt_setprop_inplace_u32(blob, cpu, "soc-supply", reg_soc);
+	/* set vpu/gpu/gpc pu supplies to dummy regulator (3.10.x only) */
+	if (reg_pu) {
+		fdt_setprop_inplace_u32(blob, cpu, "pu-supply", reg_pu);
+		fdt_setprop_inplace_u32(blob, gpu, "pu-supply", reg_pu);
+		fdt_setprop_inplace_u32(blob, vpu, "pu-supply", reg_pu);
+		fdt_setprop_inplace_u32(blob, gpc, "pu-supply", reg_pu);
+	}
+
+	/* set fsl,ldo-bypass property of gcp to 1 */
+	fdt_setprop_inplace_u32(blob, gpc, "fsl,ldo-bypass", 1);
+
+	return 0;
 }
 
 /*
@@ -899,11 +1016,20 @@ int ft_board_setup(void *blob, bd_t *bd)
 	/* set desired digital video capture format */
 	ft_sethdmiinfmt(blob, getenv("hdmiinfmt"));
 
+	/* enable LDO-bypass mode */
+	if (getenv("ldobypass")) {
+		if (!disable_dt_ldo(blob))
+			printf("   Set LDO-bypass mode\n");
+	}
+
 	/* if arm/soc/pu regulators are imx6 anatop regs we are using LDO's */
 	if (!strcmp("fsl,anatop-regulator", get_cpureg(blob, "arm-supply")) &&
 	    !strcmp("fsl,anatop-regulator", get_cpureg(blob, "pu-supply")) &&
 	    !strcmp("fsl,anatop-regulator", get_cpureg(blob, "soc-supply")))
+	{
 		ldo_enabled = 1;
+	}
+	debug("Detected LDO-%s mode\n", ldo_enabled ? "enabled" : "bypass");
 
 	/*
 	 * disable serial2 node for GW54xx for compatibility with older
