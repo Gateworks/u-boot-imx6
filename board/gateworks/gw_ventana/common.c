@@ -833,6 +833,12 @@ void setup_pmic(void)
 			pmic_reg_read(p, LTC3676_DVB3B, &reg);
 			reg |= LTC3676_PGOOD_MASK;
 			pmic_reg_write(p, LTC3676_DVB3B, reg);
+
+			/* Use continuous PWM mode, 1Mhz on all regulators */
+			power_ltc3676_swconfig(p, SW1, PWM, PHASE1, F1125KHZ);
+			power_ltc3676_swconfig(p, SW2, PWM, PHASE1, F1125KHZ);
+			power_ltc3676_swconfig(p, SW3, PWM, PHASE1, F1125KHZ);
+			power_ltc3676_swconfig(p, SW4, PWM, PHASE1, F1125KHZ);
 		}
 	}
 }
