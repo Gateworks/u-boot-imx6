@@ -1048,8 +1048,8 @@ int ft_board_setup(void *blob, bd_t *bd)
 	}
 
 	else if (board_type == GW53xx) {
-		/* GW53xx revF uses WDOG1_B as an external reset */
-		if (rev < 'F')
+		/* GW53xx revE uses WDOG1_B as an external reset */
+		if (rev < 'E')
 			ft_delprop_path(blob, WDOG1_PATH, "ext-reset-output");
 	}
 
