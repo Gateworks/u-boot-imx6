@@ -921,10 +921,6 @@ int ft_board_setup(void *blob, bd_t *bd)
 	}
 
 	else if (board_type == GW53xx) {
-		/* bump ldo-bypass IMX6Q 1GHZ ARM operating point to 1.31V */
-		if (rev < 'E' && is_cpu_type(MXC_CPU_MX6Q) && !ldo_enabled)
-			fdt_fixup_opp(blob, "/cpus/cpu@0", 996000, 1310000);
-
 		/* GW53xx revF uses WDOG1_B as an external reset */
 		if (rev < 'F')
 			ft_delprop_path(blob, WDOG1_PATH, "ext-reset-output");
