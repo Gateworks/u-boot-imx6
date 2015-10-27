@@ -1097,6 +1097,11 @@ int ft_board_setup(void *blob, bd_t *bd)
 		/* GW522x revB uses WDOG1_B as an external reset */
 		if (info->model[4] == '2' && rev < 'B')
 			ft_delprop_path(blob, WDOG1_PATH, "ext-reset-output");
+
+		/* these have broken usd_vsel */
+		if (strstr((const char *)info->model, "SP318-B") ||
+		    strstr((const char *)info->model, "SP331-B"))
+			gpio_cfg[board_type].usd_vsel = 0;
 	}
 
 	else if (board_type == GW551x) {
@@ -1144,11 +1149,6 @@ int ft_board_setup(void *blob, bd_t *bd)
 	}
 
 	else if (board_type == GW552x) {
-		/* these have broken usd_vsel */
-		if (strstr((const char *)info->model, "SP318-B") ||
-		    strstr((const char *)info->model, "SP331-B"))
-			gpio_cfg[board_type].usd_vsel = 0;
-
 		/* GW552x revC uses WDOG1_B as an external reset */
 		if (rev < 'C')
 			ft_delprop_path(blob, WDOG1_PATH, "ext-reset-output");
