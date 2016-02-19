@@ -599,7 +599,9 @@ int do_bootm_states(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[],
 	if (!ret && (states & BOOTM_STATE_LOADOS)) {
 		ulong load_end;
 
-		iflag = bootm_disable_interrupts();
+		/* disable interrupts if not using NetConsole */
+		if (strcmp("nc", stdio_devices[stdin]->name))
+			iflag = bootm_disable_interrupts();
 		ret = bootm_load_os(images, &load_end, 0);
 		if (ret == 0)
 			lmb_reserve(&images->lmb, images->os.load,
