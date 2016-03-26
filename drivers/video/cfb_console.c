@@ -1986,7 +1986,6 @@ static void plot_logo_or_black(void *screen, int width, int x, int y, int black)
 static void *video_logo(void)
 {
 	char info[128];
-	int space, len;
 	__maybe_unused int y_off = 0;
 	__maybe_unused ulong addr;
 	__maybe_unused char *s;
@@ -2036,6 +2035,8 @@ static void *video_logo(void)
 
 	sprintf(info, " %s", version_string);
 
+#ifndef CONFIG_HIDE_LOGO_VERSION
+	int space, len;
 	space = (VIDEO_LINE_LEN / 2 - VIDEO_INFO_X) / VIDEO_FONT_WIDTH;
 	len = strlen(info);
 
@@ -2048,6 +2049,7 @@ static void *video_logo(void)
 		y_off = 1;
 	} else
 		video_drawstring(VIDEO_INFO_X, VIDEO_INFO_Y, (uchar *) info);
+#endif
 
 #ifdef CONFIG_CONSOLE_EXTRA_INFO
 	{
