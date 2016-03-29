@@ -1451,6 +1451,11 @@ int ft_board_setup(void *blob, bd_t *bd)
 	printf("   Config LDO-%s mode\n", ldo_enabled ? "enabled" : "bypass");
 	adjust_pmic(ldo_enabled);
 
+#if defined(CONFIG_CMD_PCI)
+	if (!getenv("nopcifixup"))
+		ft_board_pci_fixup(blob, bd);
+#endif
+
 	/*
 	 * Peripheral Config:
 	 *  remove nodes by alias path if EEPROM config tells us the
@@ -1468,11 +1473,6 @@ int ft_board_setup(void *blob, bd_t *bd)
 		}
 		cfg++;
 	}
-
-#if defined(CONFIG_CMD_PCI)
-	if (!getenv("nopcifixup"))
-		ft_board_pci_fixup(blob, bd);
-#endif /* if defined(CONFIG_CMD_PCI) */
 
 	return 0;
 }
