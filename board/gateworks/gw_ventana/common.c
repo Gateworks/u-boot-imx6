@@ -132,8 +132,6 @@ void setup_ventana_i2c(void)
 
 /* common to add baseboards */
 static iomux_v3_cfg_t const gw_gpio_pads[] = {
-	/* MSATA_EN */
-	IOMUX_PADS(PAD_SD4_DAT0__GPIO2_IO08 | DIO_PAD_CFG),
 	/* RS232_EN# */
 	IOMUX_PADS(PAD_SD4_DAT3__GPIO2_IO11 | DIO_PAD_CFG),
 	/* SD3_VSELECT */
@@ -185,6 +183,8 @@ static iomux_v3_cfg_t const gw51xx_gpio_pads[] = {
 };
 
 static iomux_v3_cfg_t const gw52xx_gpio_pads[] = {
+	/* MSATA_EN */
+	IOMUX_PADS(PAD_SD4_DAT0__GPIO2_IO08 | DIO_PAD_CFG),
 	/* PANLEDG# */
 	IOMUX_PADS(PAD_KEY_COL0__GPIO4_IO06 | DIO_PAD_CFG),
 	/* PANLEDR# */
@@ -214,6 +214,8 @@ static iomux_v3_cfg_t const gw52xx_gpio_pads[] = {
 };
 
 static iomux_v3_cfg_t const gw53xx_gpio_pads[] = {
+	/* MSATA_EN */
+	IOMUX_PADS(PAD_SD4_DAT0__GPIO2_IO08 | DIO_PAD_CFG),
 	/* CAN_STBY */
 	IOMUX_PADS(PAD_GPIO_2__GPIO1_IO02 | DIO_PAD_CFG),
 	/* USB_HUBRST# */
@@ -243,6 +245,8 @@ static iomux_v3_cfg_t const gw53xx_gpio_pads[] = {
 };
 
 static iomux_v3_cfg_t const gw54xx_gpio_pads[] = {
+	/* MSATA_EN */
+	IOMUX_PADS(PAD_SD4_DAT0__GPIO2_IO08 | DIO_PAD_CFG),
 	/* CAN_STBY */
 	IOMUX_PADS(PAD_GPIO_2__GPIO1_IO02 | DIO_PAD_CFG),
 	/* PANLEDG# */
@@ -285,6 +289,8 @@ static iomux_v3_cfg_t const gw551x_gpio_pads[] = {
 };
 
 static iomux_v3_cfg_t const gw552x_gpio_pads[] = {
+	/* MSATA_EN */
+	IOMUX_PADS(PAD_SD4_DAT0__GPIO2_IO08 | DIO_PAD_CFG),
 	/* USBOTG_SEL */
 	IOMUX_PADS(PAD_GPIO_7__GPIO1_IO07 | DIO_PAD_CFG),
 	/* USB_HUBRST# */
@@ -447,6 +453,7 @@ struct ventana gpio_cfg[GW_UNKNOWN] = {
 		.vidin_en = IMX_GPIO_NR(3, 31),
 		.usb_sel = IMX_GPIO_NR(1, 2),
 		.wdis = IMX_GPIO_NR(7, 12),
+		.msata_en = GP_MSATA_SEL,
 	},
 
 	/* GW53xx */
@@ -491,6 +498,7 @@ struct ventana gpio_cfg[GW_UNKNOWN] = {
 		.gps_shdn = IMX_GPIO_NR(1, 27),
 		.vidin_en = IMX_GPIO_NR(3, 31),
 		.wdis = IMX_GPIO_NR(7, 12),
+		.msata_en = GP_MSATA_SEL,
 	},
 
 	/* GW54xx */
@@ -537,6 +545,7 @@ struct ventana gpio_cfg[GW_UNKNOWN] = {
 		.dioi2c_en = IMX_GPIO_NR(4,  5),
 		.pcie_sson = IMX_GPIO_NR(1, 20),
 		.wdis = IMX_GPIO_NR(5, 17),
+		.msata_en = GP_MSATA_SEL,
 	},
 
 	/* GW551x */
@@ -604,6 +613,7 @@ struct ventana gpio_cfg[GW_UNKNOWN] = {
 		.pcie_rst = IMX_GPIO_NR(1, 29),
 		.usb_sel = IMX_GPIO_NR(1, 7),
 		.wdis = IMX_GPIO_NR(7, 12),
+		.msata_en = GP_MSATA_SEL,
 	},
 };
 
@@ -617,10 +627,6 @@ void setup_iomux_gpio(int board, struct ventana_board_info *info)
 	/* OTG power off */
 	gpio_request(GP_USB_OTG_PWR, "usbotg_pwr");
 	gpio_direction_output(GP_USB_OTG_PWR, 0);
-
-	/* MSATA Enable - default to PCI */
-	gpio_request(GP_MSATA_SEL, "msata_en");
-	gpio_direction_output(GP_MSATA_SEL, 0);
 
 	/* RS232_EN# */
 	gpio_request(GP_RS232_EN, "rs232_en");
@@ -649,6 +655,12 @@ void setup_iomux_gpio(int board, struct ventana_board_info *info)
 			gpio_request(gpio_cfg[board].leds[i], name);
 			gpio_direction_output(gpio_cfg[board].leds[i], 1);
 		}
+	}
+
+	/* MSATA Enable - default to PCI */
+	if (gpio_cfg[board].msata_en) {
+		gpio_request(gpio_cfg[board].msata_en, "msata_en");
+		gpio_direction_output(gpio_cfg[board].msata_en, 0);
 	}
 
 	/* Expansion Mezzanine IO */
@@ -725,10 +737,9 @@ void setup_board_gpio(int board, struct ventana_board_info *info)
 	gpio_direction_output(GP_RS232_EN, (hwconfig("rs232")) ? 0 : 1);
 
 	/* MSATA Enable */
-	if (is_cpu_type(MXC_CPU_MX6Q) &&
-	    test_bit(EECONFIG_SATA, info->config)) {
+	if (gpio_cfg[board].msata_en && is_cpu_type(MXC_CPU_MX6Q)) {
 		gpio_direction_output(GP_MSATA_SEL,
-				      (hwconfig("msata")) ?  1 : 0);
+				      (hwconfig("msata")) ? 1 : 0);
 	}
 
 	/* USBOTG Select (PCISKT or FrontPanel) */
@@ -782,8 +793,7 @@ void setup_board_gpio(int board, struct ventana_board_info *info)
 	}
 
 	if (!quiet) {
-		if (is_cpu_type(MXC_CPU_MX6Q) &&
-		    (test_bit(EECONFIG_SATA, info->config))) {
+		if (gpio_cfg[board].msata_en && is_cpu_type(MXC_CPU_MX6Q)) {
 			printf("MSATA: %s\n", (hwconfig("msata") ?
 			       "enabled" : "disabled"));
 		}
