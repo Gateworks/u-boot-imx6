@@ -265,10 +265,9 @@ int board_phy_config(struct phy_device *phydev)
 int board_eth_init(bd_t *bis)
 {
 #ifdef CONFIG_FEC_MXC
-	if (board_type != GW551x &&
-	    board_type != GW552x &&
-	    board_type != GW553x)
-	{
+	struct ventana_board_info *info = &ventana_info;
+
+	if (test_bit(EECONFIG_ETH0, info->config)) {
 		setup_iomux_enet(GP_PHY_RST);
 		cpu_eth_init(bis);
 	}
