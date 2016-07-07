@@ -78,6 +78,7 @@ struct ventana {
 	int usb_sel;
 	int wdis;
 	int msata_en;
+	int rs232_en;
 	/* various features */
 	bool usd_vsel;
 };
