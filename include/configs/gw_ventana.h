@@ -16,6 +16,7 @@
 #define CONFIG_SPL_POWER_SUPPORT
 /* Location in NAND to read U-Boot from */
 #define CONFIG_SYS_NAND_U_BOOT_OFFS     (14 * SZ_1M)
+#define CONFIG_SYS_BOOTM_LEN         (64 << 20)
 
 /* Falcon Mode */
 #define CONFIG_CMD_SPL
