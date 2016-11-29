@@ -13,6 +13,7 @@
 #include <linux/ctype.h>
 #include <linux/types.h>
 #include <asm/global_data.h>
+#include <asm/unaligned.h>
 #include <libfdt.h>
 #include <fdt_support.h>
 #include <asm/io.h>
@@ -739,7 +740,7 @@ static int fdt_parse_prop(char * const *newval, int count, char *data, int *len)
 
 			cp = newp;
 			tmp = simple_strtoul(cp, &newp, 0);
-			*(__be32 *)data = __cpu_to_be32(tmp);
+			put_unaligned_be32(tmp, data);
 			data  += 4;
 			*len += 4;
 
