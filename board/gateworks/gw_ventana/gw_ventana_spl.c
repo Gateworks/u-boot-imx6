@@ -367,6 +367,25 @@ static struct mx6_mmdc_calibration mx6dq_512x32_mmdc_calib = {
 	.p0_mpwrdlctl = 0x303E3C36,
 };
 
+static struct mx6_mmdc_calibration mx6dq_512x64_mmdc_calib = {
+	/* write leveling calibration determine */
+	.p0_mpwldectrl0 = 0x00230020,
+	.p0_mpwldectrl1 = 0x002F002A,
+	.p1_mpwldectrl0 = 0x001D0027,
+	.p1_mpwldectrl1 = 0x00100023,
+	/* Read DQS Gating calibration */
+	.p0_mpdgctrl0 = 0x03250339,
+	.p0_mpdgctrl1 = 0x031C0316,
+	.p1_mpdgctrl0 = 0x03210331,
+	.p1_mpdgctrl1 = 0x031C025A,
+	/* Read Calibration: DQS delay relative to DQ read access */
+	.p0_mprddlctl = 0x40373C40,
+	.p1_mprddlctl = 0x3A373646,
+	/* Write Calibration: DQ/DM delay relative to DQS write access */
+	.p0_mpwrdlctl = 0x2E353933,
+	.p1_mpwrdlctl = 0x3C2F3F35,
+};
+
 static void spl_dram_init(int width, int size_mb, int board_model)
 {
 	struct mx6_ddr3_cfg *mem = NULL;
@@ -465,6 +484,11 @@ static void spl_dram_init(int width, int size_mb, int board_model)
 		if (is_cpu_type(MXC_CPU_MX6Q))
 			calib = &mx6dq_256x64_mmdc_calib;
 		debug("4gB density\n");
+	} else if (width == 64 && size_mb == 4096) {
+		mem = &mt41k512m16ha_125;
+		if (is_cpu_type(MXC_CPU_MX6Q))
+			calib = &mx6dq_512x64_mmdc_calib;
+		debug("8gB density\n");
 	}
 
 	if (!(mem && calib)) {
