@@ -1393,10 +1393,10 @@ int ft_board_setup(void *blob, bd_t *bd)
 
 	else if (board_type == GW551x) {
 		/*
-		 * isolate CSI0_DATA_EN for GW551x below revB to work around
+		 * isolate CSI0_DATA_EN for GW551x revA/revC to work around
 		 * errata causing non functional digital video in (it is not hooked up)
 		 */
-		if (rev == 'A') {
+		if (rev == 'A' || rev == 'C') {
 			u32 *range = NULL;
 			int len;
 			const u32 *handle = NULL;
