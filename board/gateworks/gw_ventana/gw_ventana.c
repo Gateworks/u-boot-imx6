@@ -37,6 +37,7 @@
 #include <fdt_support.h>
 #include <jffs2/load_kernel.h>
 #include <spi_flash.h>
+#include <spl.h>
 
 #include "gsc.h"
 #include "common.h"
@@ -785,6 +786,96 @@ int misc_init_r(void)
 		/* memory MB */
 		sprintf(str, "%d", (int) (gd->ram_size >> 20));
 		setenv("mem_mb", str);
+	}
+
+	/* create some default commands based on boot medium */
+	if (!getenv("updateuboot")) {
+		buf[0] = 0;
+		switch (spl_boot_device()) {
+		case BOOT_DEVICE_MMC1:
+			if ((board_type == GW560x) ||
+			    (board_type == GW5903) ||
+			    (board_type == GW5904)) {
+				sprintf(buf, "tftp ${loadaddr} ventana/u-boot.img && "
+					"mmc dev 0 1 && "
+					"mmc write ${loadaddr} 0x8a 0x500");
+			} else {
+				sprintf(buf, "tftp ${loadaddr} ventana/u-boot.img && "
+					"mmc write ${loadaddr} 0x8a 0x500");
+			}
+			break;
+		case BOOT_DEVICE_NAND:
+			sprintf(buf, "tftp ${loadaddr} ventana/u-boot.img && "
+				"nand erase 0xe00000 0x200000 && "
+				"nand write ${loadaddr} 0xe00000 ${filesize}");
+			break;
+		case BOOT_DEVICE_SATA:
+			sprintf(buf, "tftp ${loadaddr} ventana/u-boot.img && "
+				"sata write ${loadaddr} 0x8a 0x500");
+			break;
+		}
+		if (buf[0])
+			setenv("updateuboot", buf);
+	}
+	if (!getenv("updatespl")) {
+		buf[0] = 0;
+		switch (spl_boot_device()) {
+		case BOOT_DEVICE_MMC1:
+			if ((board_type == GW560x) ||
+			     (board_type == GW5903) ||
+			     (board_type == GW5904)) {
+				sprintf(buf, "tftp ${loadaddr} ventana/SPL && "
+					"mmc dev 0 1 && "
+					"mmc write ${loadaddr} 2 0x86");
+			}
+			break;
+		}
+		if (buf[0])
+			setenv("updatespl", buf);
+	}
+	if (!getenv("updateroot")) {
+		buf[0] = 0;
+		switch (spl_boot_device()) {
+		case BOOT_DEVICE_MMC1:
+			if ((board_type == GW560x) ||
+			     (board_type == GW5903) ||
+			     (board_type == GW5904)) {
+				sprintf(buf, "tftp ${loadaddr} ${image_root} "
+					"&& mmc dev 0 0 "
+					"&& gzwrite mmc 0 ${loadaddr} ${filesize} 100000 0 1c6000000");
+			}
+			break;
+		case BOOT_DEVICE_NAND:
+			sprintf(buf, "tftp ${loadaddr} ${image_root} && "
+				"nand erase.part rootfs && "
+				"nand write ${loadaddr} rootfs ${filesize}");
+			break;
+		}
+		if (buf[0])
+			setenv("updateroot", buf);
+	}
+	if (!getenv("updaterootfs")) {
+		buf[0] = 0;
+		switch (spl_boot_device()) {
+		case BOOT_DEVICE_MMC1:
+			if ((board_type == GW560x) ||
+			     (board_type == GW5903) ||
+			     (board_type == GW5904)) {
+				sprintf(buf, "tftp ${loadaddr} ${image_rootfs} "
+					"&& mmc dev 0 0 "
+					"&& gzwrite mmc 0 ${loadaddr} ${filesize} 100000 100000");
+			}
+			break;
+		case BOOT_DEVICE_NAND:
+			sprintf(buf, "tftp ${loadaddr} ${image_root} && "
+				"ubi part rootfs && "
+				"ubi remove rootfs && "
+				"ubi create rootfs a00000 static && "
+				"ubi write ${loadaddr} rootfs ${filesize}");
+			break;
+		}
+		if (buf[0])
+			setenv("updaterootfs", buf);
 	}
 
 	/* Set a non-initialized hwconfig based on board configuration */
