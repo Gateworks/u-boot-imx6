@@ -1240,6 +1240,12 @@ void ft_board_pci_fixup(void *blob, bd_t *bd)
 }
 #endif /* if defined(CONFIG_CMD_PCI) */
 
+void ft_board_wdog_fixup(void *blob, const char *path)
+{
+	ft_delprop_path(blob, path, "ext-reset-output");
+	ft_delprop_path(blob, path, "fsl,ext-reset-output");
+}
+
 /*
  * called prior to booting kernel or by 'fdt boardsetup' command
  *
@@ -1331,13 +1337,13 @@ int ft_board_setup(void *blob, bd_t *bd)
 
 		/* GW54xx revE uses WDOG2_B as an external reset */
 		if (rev < 'E')
-			ft_delprop_path(blob, WDOG2_PATH, "ext-reset-output");
+			ft_board_wdog_fixup(blob, WDOG2_PATH);
 	}
 
 	else if (board_type == GW53xx) {
 		/* GW53xx revE uses WDOG1_B as an external reset */
 		if (rev < 'E')
-			ft_delprop_path(blob, WDOG1_PATH, "ext-reset-output");
+			ft_board_wdog_fixup(blob, WDOG1_PATH);
 	}
 
 	else if (board_type == GW51xx) {
@@ -1350,7 +1356,7 @@ int ft_board_setup(void *blob, bd_t *bd)
 
 		/* GW51xx revE uses WDOG1_B as an external reset */
 		if (rev < 'E')
-			ft_delprop_path(blob, WDOG1_PATH, "ext-reset-output");
+			ft_board_wdog_fixup(blob, WDOG1_PATH);
 	}
 
 	else if (board_type == GW52xx) {
@@ -1379,11 +1385,11 @@ int ft_board_setup(void *blob, bd_t *bd)
 
 		/* GW520x revE uses WDOG1_B as an external reset */
 		if (info->model[4] == '0' && rev < 'E')
-			ft_delprop_path(blob, WDOG1_PATH, "ext-reset-output");
+			ft_board_wdog_fixup(blob, WDOG1_PATH);
 
 		/* GW522x revB uses WDOG1_B as an external reset */
 		if (info->model[4] == '2' && rev < 'B')
-			ft_delprop_path(blob, WDOG1_PATH, "ext-reset-output");
+			ft_board_wdog_fixup(blob, WDOG1_PATH);
 
 		/* these have broken usd_vsel */
 		if (strstr((const char *)info->model, "SP318-B") ||
@@ -1432,13 +1438,13 @@ int ft_board_setup(void *blob, bd_t *bd)
 
 		/* GW551x revC uses WDOG1_B as an external reset */
 		if (rev < 'C')
-			ft_delprop_path(blob, WDOG1_PATH, "ext-reset-output");
+			ft_board_wdog_fixup(blob, WDOG1_PATH);
 	}
 
 	else if (board_type == GW552x) {
 		/* GW552x revC uses WDOG1_B as an external reset */
 		if (rev < 'C')
-			ft_delprop_path(blob, WDOG1_PATH, "ext-reset-output");
+			ft_board_wdog_fixup(blob, WDOG1_PATH);
 	}
 
 	/* remove no-1-8-v if UHS-I support is present */
