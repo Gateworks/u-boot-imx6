@@ -710,7 +710,7 @@ static const struct boot_mode board_boot_modes[] = {
 	/* NAND: 64pages per block, 3 row addr cycles, 2 copies of FCB/DBBT */
 	{ "nand", MAKE_CFGVAL(0x80, 0x02, 0x00, 0x00) },
 	{ "emmc2", MAKE_CFGVAL(0x60, 0x48, 0x00, 0x00) }, /* GW5600 */
-	{ "emmc3", MAKE_CFGVAL(0x60, 0x50, 0x00, 0x00) }, /* GW5903/GW5904 */
+	{ "emmc3", MAKE_CFGVAL(0x60, 0x50, 0x00, 0x00) }, /* GW5903/4/5 */
 	{ NULL, 0 },
 };
 #endif
@@ -797,7 +797,8 @@ int misc_init_r(void)
 		case BOOT_DEVICE_MMC1:
 			if ((board_type == GW560x) ||
 			    (board_type == GW5903) ||
-			    (board_type == GW5904)) {
+			    (board_type == GW5905) ||
+			    (board_type == GW5905)) {
 				sprintf(buf, "tftp ${loadaddr} ventana/u-boot.img && "
 					"mmc dev 0 1 && "
 					"mmc write ${loadaddr} 0x8a 0x500");
@@ -824,8 +825,9 @@ int misc_init_r(void)
 		switch (spl_boot_device()) {
 		case BOOT_DEVICE_MMC1:
 			if ((board_type == GW560x) ||
-			     (board_type == GW5903) ||
-			     (board_type == GW5904)) {
+			    (board_type == GW5903) ||
+			    (board_type == GW5904) ||
+			    (board_type == GW5905)) {
 				sprintf(buf, "tftp ${loadaddr} ventana/SPL && "
 					"mmc dev 0 1 && "
 					"mmc write ${loadaddr} 2 0x86");
@@ -840,8 +842,9 @@ int misc_init_r(void)
 		switch (spl_boot_device()) {
 		case BOOT_DEVICE_MMC1:
 			if ((board_type == GW560x) ||
-			     (board_type == GW5903) ||
-			     (board_type == GW5904)) {
+			    (board_type == GW5903) ||
+			    (board_type == GW5904) ||
+			    (board_type == GW5905)) {
 				sprintf(buf, "tftp ${loadaddr} ${image_root} "
 					"&& mmc dev 0 0 "
 					"&& gzwrite mmc 0 ${loadaddr} ${filesize} 100000 0 1c6000000");
@@ -861,8 +864,9 @@ int misc_init_r(void)
 		switch (spl_boot_device()) {
 		case BOOT_DEVICE_MMC1:
 			if ((board_type == GW560x) ||
-			     (board_type == GW5903) ||
-			     (board_type == GW5904)) {
+			    (board_type == GW5903) ||
+			    (board_type == GW5904) ||
+			    (board_type == GW5905)) {
 				sprintf(buf, "tftp ${loadaddr} ${image_rootfs} "
 					"&& mmc dev 0 0 "
 					"&& gzwrite mmc 0 ${loadaddr} ${filesize} 100000 100000");
