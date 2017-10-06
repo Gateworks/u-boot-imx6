@@ -235,6 +235,7 @@
   /* allow env in MMC */
   #define CONFIG_ENV_IS_IN_MMC
   #define CONFIG_SYS_MMC_ENV_DEV	0
+  #define CONFIG_SYS_MMC_ENV_PART	1 /* eMMC Boot0 hw part */
   #define CONFIG_ENV_MMC_SIZE		(128 * SZ_1K)
   #define CONFIG_ENV_MMC_OFFSET		(709 * SZ_1K)
   #define CONFIG_ENV_MMC_OFFSET_REDUND	(CONFIG_ENV_MMC_OFFSET + (128 * SZ_1K))
