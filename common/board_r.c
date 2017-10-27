@@ -61,6 +61,7 @@
 #include <asm/arch/mmu.h>
 #endif
 #include <efi_loader.h>
+#include <spl.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -415,6 +416,9 @@ static int initr_spi(void)
 /* go init the NAND */
 static int initr_nand(void)
 {
+	if (spl_boot_device() != BOOT_DEVICE_NAND)
+		return 0;
+
 	puts("NAND:  ");
 	nand_init();
 	printf("%lu MiB\n", nand_size() / 1024);
