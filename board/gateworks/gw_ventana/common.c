@@ -883,6 +883,7 @@ struct ventana gpio_cfg[GW_UNKNOWN] = {
 		.vidin_en = IMX_GPIO_NR(5, 20),
 		.wdis = IMX_GPIO_NR(7, 12),
 		.otgpwr_en = IMX_GPIO_NR(3, 22),
+		.nand = true,
 	},
 
 	/* GW52xx */
@@ -908,6 +909,7 @@ struct ventana gpio_cfg[GW_UNKNOWN] = {
 		.otgpwr_en = IMX_GPIO_NR(3, 22),
 		.vsel_pin = IMX_GPIO_NR(6, 14),
 		.mmc_cd = IMX_GPIO_NR(7, 0),
+		.nand = true,
 	},
 
 	/* GW53xx */
@@ -932,6 +934,7 @@ struct ventana gpio_cfg[GW_UNKNOWN] = {
 		.otgpwr_en = IMX_GPIO_NR(3, 22),
 		.vsel_pin = IMX_GPIO_NR(6, 14),
 		.mmc_cd = IMX_GPIO_NR(7, 0),
+		.nand = true,
 	},
 
 	/* GW54xx */
@@ -958,6 +961,7 @@ struct ventana gpio_cfg[GW_UNKNOWN] = {
 		.otgpwr_en = IMX_GPIO_NR(3, 22),
 		.vsel_pin = IMX_GPIO_NR(6, 14),
 		.mmc_cd = IMX_GPIO_NR(7, 0),
+		.nand = true,
 	},
 
 	/* GW551x */
@@ -971,6 +975,7 @@ struct ventana gpio_cfg[GW_UNKNOWN] = {
 		},
 		.pcie_rst = IMX_GPIO_NR(1, 0),
 		.wdis = IMX_GPIO_NR(7, 12),
+		.nand = true,
 	},
 
 	/* GW552x */
@@ -988,6 +993,7 @@ struct ventana gpio_cfg[GW_UNKNOWN] = {
 		.usb_sel = IMX_GPIO_NR(1, 7),
 		.wdis = IMX_GPIO_NR(7, 12),
 		.msata_en = GP_MSATA_SEL,
+		.nand = true,
 	},
 
 	/* GW553x */
@@ -1006,6 +1012,7 @@ struct ventana gpio_cfg[GW_UNKNOWN] = {
 		.otgpwr_en = IMX_GPIO_NR(3, 22),
 		.vsel_pin = IMX_GPIO_NR(6, 14),
 		.mmc_cd = IMX_GPIO_NR(7, 0),
+		.nand = true,
 	},
 
 	/* GW560x */
