@@ -747,6 +747,20 @@ struct ventana gpio_cfg[GW_UNKNOWN] = {
 		.wdis = IMX_GPIO_NR(7, 12),
 		.msata_en = GP_MSATA_SEL,
 	},
+
+	/* GW5907 */
+	{
+		.gpio_pads = gw51xx_gpio_pads,
+		.num_pads = ARRAY_SIZE(gw51xx_gpio_pads)/2,
+		.dio_cfg = gw51xx_dio,
+		.dio_num = ARRAY_SIZE(gw51xx_dio),
+		.leds = {
+			IMX_GPIO_NR(4, 6),
+			IMX_GPIO_NR(4, 10),
+		},
+		.pcie_rst = IMX_GPIO_NR(1, 0),
+		.wdis = IMX_GPIO_NR(7, 12),
+	},
 };
 
 void setup_iomux_gpio(int board, struct ventana_board_info *info)
