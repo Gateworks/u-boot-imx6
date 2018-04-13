@@ -136,6 +136,8 @@ read_eeprom(int bus, struct ventana_board_info *info)
 			type = GW5906;
 		else if (info->model[4] == '0' && info->model[5] == '7')
 			type = GW5907;
+		else if (info->model[4] == '0' && info->model[5] == '8')
+			type = GW5908;
 		break;
 	default:
 		printf("EEPROM: Unknown model in EEPROM: %s\n", info->model);
