@@ -29,6 +29,8 @@
 #include "imx6_spl.h"                  /* common IMX6 SPL configuration */
 #include "mx6_common.h"
 #define CONFIG_DISPLAY_BOARDINFO_LATE
+#undef CONFIG_SYS_BOOTM_LEN
+#define CONFIG_SYS_BOOTM_LEN   (64 << 20)      /* Increase max gunzip size */
 
 #define CONFIG_MACH_TYPE	4520   /* Gateworks Ventana Platform */
 
