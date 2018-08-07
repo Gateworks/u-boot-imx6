@@ -825,7 +825,7 @@ int misc_init_r(void)
 			    (board_type == GW5905) ||
 			    (board_type == GW5905)) {
 				sprintf(buf, "tftp ${loadaddr} ventana/u-boot.img && "
-					"mmc dev 0 1 && "
+					"mmc dev 0 0 && "
 					"mmc write ${loadaddr} 0x8a 0x500");
 			} else {
 				sprintf(buf, "tftp ${loadaddr} ventana/u-boot.img && "
@@ -854,7 +854,7 @@ int misc_init_r(void)
 			    (board_type == GW5904) ||
 			    (board_type == GW5905)) {
 				sprintf(buf, "tftp ${loadaddr} ventana/SPL && "
-					"mmc dev 0 1 && "
+					"mmc dev 0 0 && "
 					"mmc write ${loadaddr} 2 0x86");
 			}
 			break;
