@@ -567,6 +567,10 @@ static iomux_v3_cfg_t const gw5905_gpio_pads[] = {
 	IOMUX_PADS(PAD_DISP0_DAT23__GPIO5_IO17 | DIO_PAD_CFG),
 	/* GYRO_CONTROL/DATA_EN */
 	IOMUX_PADS(PAD_CSI0_DAT8__GPIO5_IO26 | DIO_PAD_CFG),
+	/* TOUCH_RST */
+	IOMUX_PADS(PAD_KEY_COL1__GPIO4_IO08 | DIO_PAD_CFG),
+	/* TOUCH_IRQ */
+	IOMUX_PADS(PAD_KEY_COL0__GPIO4_IO06 | DIO_PAD_CFG),
 };
 
 /* Digital I/O */
@@ -1476,12 +1480,20 @@ void setup_iomux_gpio(int board, struct ventana_board_info *info)
 		SETUP_GPIO_OUTPUT(IMX_GPIO_NR(1, 15), "mipi_rst#", 0);
 		SETUP_GPIO_OUTPUT(IMX_GPIO_NR(2, 3), "emmy_pdwn#", 1);
 		SETUP_GPIO_OUTPUT(IMX_GPIO_NR(4, 5), "spk_shdn#", 0);
+		SETUP_GPIO_OUTPUT(IMX_GPIO_NR(4, 8), "touch_rst", 0);
+		SETUP_GPIO_OUTPUT(IMX_GPIO_NR(4, 6), "touch_irq", 0);
 		SETUP_GPIO_OUTPUT(IMX_GPIO_NR(5, 5), "flash_en1", 0);
 		SETUP_GPIO_OUTPUT(IMX_GPIO_NR(5, 6), "flash_en2", 0);
 		SETUP_GPIO_OUTPUT(IMX_GPIO_NR(5, 14), "dect_rst#", 1);
 		SETUP_GPIO_OUTPUT(IMX_GPIO_NR(5, 17), "codec_rst#", 0);
 		SETUP_GPIO_OUTPUT(IMX_GPIO_NR(5, 26), "imu_den", 1);
 		SETUP_GPIO_OUTPUT(IMX_GPIO_NR(7, 12), "lvds_cabc", 0);
+		mdelay(100);
+		/*
+		 * gauruntee touch controller comes out of reset with INT
+		 * low for address
+		 */
+		SETUP_GPIO_OUTPUT(IMX_GPIO_NR(4, 8), "touch_rst", 1);
 		break;
 	}
 }
