@@ -1456,9 +1456,6 @@ void setup_iomux_gpio(int board, struct ventana_board_info *info)
 		gpio_direction_output(IMX_GPIO_NR(1, 7), 1);
 		break;
 	case GW5909:
-		gpio_request(IMX_GPIO_NR(2, 11), "uart2_en#");
-		gpio_direction_output(IMX_GPIO_NR(2, 11), 1);
-		/* fall through */
 	case GW5904:
 		gpio_request(IMX_GPIO_NR(5, 11), "skt1_wdis#");
 		gpio_direction_output(IMX_GPIO_NR(5, 11), 1);
