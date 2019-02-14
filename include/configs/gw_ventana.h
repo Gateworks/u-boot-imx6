@@ -370,6 +370,12 @@
 	#define CONFIG_EXTRA_ENV_SETTINGS \
 	CONFIG_EXTRA_ENV_SETTINGS_COMMON \
 	\
+	"image_rootfs=openwrt-imx6-ventana-rootfs.ubi\0" \
+	"nand_update=echo Updating NAND from ${serverip}:${image_rootfs}...; " \
+		"tftp ${loadaddr} ${image_rootfs} && " \
+		"nand erase.part rootfs && " \
+		"nand write ${loadaddr} rootfs ${filesize}\0" \
+	\
 	"flash_boot=" \
 		"setenv fsload 'ubifsload'; " \
 		"ubi part rootfs; " \
