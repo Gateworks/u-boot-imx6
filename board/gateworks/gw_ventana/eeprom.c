@@ -154,6 +154,8 @@ read_eeprom(int bus, struct ventana_board_info *info)
 			type = GW5908;
 		else if (info->model[4] == '0' && info->model[5] == '9')
 			type = GW5909;
+		else if (info->model[4] == '1' && info->model[5] == '0')
+			type = GW5910;
 		break;
 	}
 	if (type == GW_UNKNOWN) {

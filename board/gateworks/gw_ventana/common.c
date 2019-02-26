@@ -16,6 +16,7 @@
 #include <power/pmic.h>
 #include <power/ltc3676_pmic.h>
 #include <power/pfuze100_pmic.h>
+#include <power/mp5416_pmic.h>
 
 #include "common.h"
 
@@ -580,6 +581,38 @@ static iomux_v3_cfg_t const gw5905_gpio_pads[] = {
 	IOMUX_PADS(PAD_KEY_COL1__GPIO4_IO08 | DIO_PAD_CFG),
 	/* TOUCH_IRQ */
 	IOMUX_PADS(PAD_KEY_COL0__GPIO4_IO06 | DIO_PAD_CFG),
+};
+
+static iomux_v3_cfg_t const gw5910_gpio_pads[] = {
+	/* SD3_VSELECT */
+	IOMUX_PADS(PAD_NANDF_CS1__GPIO6_IO14 | DIO_PAD_CFG),
+	/* RS232_EN# */
+	IOMUX_PADS(PAD_SD4_DAT3__GPIO2_IO11 | DIO_PAD_CFG),
+	/* PANLEDG# */
+	IOMUX_PADS(PAD_KEY_COL0__GPIO4_IO06 | DIO_PAD_CFG),
+	/* PANLEDR# */
+	IOMUX_PADS(PAD_KEY_ROW0__GPIO4_IO07 | DIO_PAD_CFG),
+	/* BLE_DEV_WAKE */
+	IOMUX_PADS(PAD_GPIO_0__GPIO1_IO00 | DIO_PAD_CFG),
+	/* BLE_BT_ON */
+	IOMUX_PADS(PAD_GPIO_2__GPIO1_IO02 | DIO_PAD_CFG),
+	/* BLE_WL_ON */
+	IOMUX_PADS(PAD_GPIO_5__GPIO1_IO05 | DIO_PAD_CFG),
+	/* RF_RESET# */
+	IOMUX_PADS(PAD_GPIO_7__GPIO1_IO07 | DIO_PAD_CFG),
+	/* RF_BOOT */
+	IOMUX_PADS(PAD_GPIO_8__GPIO1_IO08 | DIO_PAD_CFG),
+	/* BLE_HOST_WAKE */
+	IOMUX_PADS(PAD_GPIO_9__GPIO1_IO09 | DIO_PAD_CFG),
+	/* MX6_LOCLED# */
+	IOMUX_PADS(PAD_KEY_ROW4__GPIO4_IO15 | DIO_PAD_CFG),
+	/* PCIESKT_WDIS# */
+	IOMUX_PADS(PAD_GPIO_17__GPIO7_IO12 | DIO_PAD_CFG),
+	/* PCI_RST# */
+	IOMUX_PADS(PAD_EIM_D20__GPIO3_IO20 | DIO_PAD_CFG),
+	/* USB OTG_ID - add pull-down */
+	IOMUX_PADS(PAD_GPIO_1__USB_OTG_ID | \
+		   MUX_PAD_CTRL(PAD_CTL_PUS_100K_DOWN)),
 };
 
 /* Digital I/O */
@@ -1314,6 +1347,25 @@ struct ventana gpio_cfg[GW_UNKNOWN] = {
 		.mezz_irq = IMX_GPIO_NR(2, 18),
 		.otgpwr_en = IMX_GPIO_NR(3, 22),
 	},
+
+	/* GW5910 */
+	{
+		.gpio_pads = gw5910_gpio_pads,
+		.num_pads = ARRAY_SIZE(gw5910_gpio_pads)/2,
+		.dio_cfg = gw52xx_dio,
+		.dio_num = ARRAY_SIZE(gw52xx_dio),
+		.leds = {
+			IMX_GPIO_NR(4, 6),
+			IMX_GPIO_NR(4, 7),
+			IMX_GPIO_NR(4, 15),
+		},
+		.pcie_rst = IMX_GPIO_NR(3, 20),
+		.wdis = IMX_GPIO_NR(7, 12),
+		.rs232_en = GP_RS232_EN,
+		.vsel_pin = IMX_GPIO_NR(6, 14),
+		.mmc_cd = IMX_GPIO_NR(7, 0),
+		.nand = true,
+	},
 };
 
 #define SETUP_GPIO_OUTPUT(gpio, name, level) \
@@ -1502,6 +1554,16 @@ void setup_iomux_gpio(int board, struct ventana_board_info *info)
 		 * low for address
 		 */
 		SETUP_GPIO_OUTPUT(IMX_GPIO_NR(4, 8), "touch_rst", 1);
+		break;
+	case GW5910:
+		/* Sterling-LWB 2.4GHz WiFi / Bluetooth module */
+		SETUP_GPIO_OUTPUT(IMX_GPIO_NR(1, 2), "ble_bt_on", 0);
+		SETUP_GPIO_OUTPUT(IMX_GPIO_NR(1, 5), "ble_wl_on", 0);
+		SETUP_GPIO_INPUT(IMX_GPIO_NR(1, 0), "ble_dev_wake");
+		SETUP_GPIO_INPUT(IMX_GPIO_NR(1, 9), "ble_host_wake");
+		/* CC1352 */
+		SETUP_GPIO_OUTPUT(IMX_GPIO_NR(1, 7), "rf_reset#", 1);
+		SETUP_GPIO_OUTPUT(IMX_GPIO_NR(1, 8), "rf_boot", 1);
 		break;
 	}
 }
@@ -1692,6 +1754,28 @@ void setup_pmic(void)
 		}
 	}
 
+	/* configure MP5416 PMIC
+	 *  - 4x buck regulators (auto PFM/PWM vs forced PWM selectable)
+	 *  - 5x LDO regulators
+	 *  - for GW5910 need to bump up VDD_ARM(SW1) and VDD_SOC(SW4)
+	 * GW5910:
+	 *    SW1: VDD_ARM 1.2V -> (1.275 to 1.5)
+	 *    SW2: VDD_1P0 1.0V
+	 *    SW3: VDD_DDR 1.5V
+	 *    SW4: VDD_SOC 1.2V -> (1.350 to 1.5)
+	 */
+	else if (!i2c_probe(CONFIG_POWER_MP5416_I2C_ADDR)) {
+		power_mp5416_init(i2c_pmic);
+		p = pmic_get("MP5416_PMIC");
+		if (!p || pmic_probe(p))
+			return;
+		puts("PMIC:  MP5416\n");
+		reg = MP5416_VSET_EN | 0x46; /* 1.475 */
+		pmic_reg_write(p, MP5416_VSET_SW1, reg);
+		reg = MP5416_VSET_EN | 0x1B; /* 1.475 */
+		pmic_reg_write(p, MP5416_VSET_SW4, reg);
+	}
+
 #if 1
 #define CONFIG_POWER_ISL9238_I2C_ADDR	0x09
 #define CONFIG_POWER_ISL9238_ADAPTERCURRENTLIMIT1	0x3f
@@ -1789,6 +1873,7 @@ int board_mmc_init(bd_t *bis)
 	case GW53xx:
 	case GW54xx:
 	case GW553x:
+	case GW5910:
 		/* usdhc3: 4bit microSD */
 		SETUP_IOMUX_PADS(usdhc3_pads);
 		usdhc_cfg[0].esdhc_base = USDHC3_BASE_ADDR;

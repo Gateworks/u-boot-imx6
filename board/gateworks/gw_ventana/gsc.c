@@ -83,6 +83,7 @@ static void read_hwmon(const char *name, uint reg, uint size)
 int gsc_info(int verbose)
 {
 	unsigned char buf[16];
+	int gsc_ver;
 
 	i2c_set_bus_num(0);
 	if (gsc_i2c_read(GSC_SC_ADDR, 0, 1, buf, 16))
@@ -98,7 +99,11 @@ int gsc_info(int verbose)
 		gsc_i2c_write(GSC_SC_ADDR, GSC_SC_STATUS, 1,
 			      &buf[GSC_SC_STATUS], 1);
 	}
-	if (!gsc_i2c_read(GSC_HWMON_ADDR, GSC_HWMON_TEMP, 1, buf, 2)) {
+	if (strncasecmp((const char*) ventana_info.model, "GW910", 6))
+		gsc_ver = 3;
+	else
+		gsc_ver = 2;
+	if (!gsc_i2c_read(GSC_HWMON_ADDR, (gsc_ver == 3) ? 6 : 0, 1, buf, 2)) {
 		int ui = buf[0] | buf[1]<<8;
 		if (ui > 0x8000)
 			ui -= 0xffff;
@@ -106,6 +111,8 @@ int gsc_info(int verbose)
 	}
 	puts("\n");
 	if (!verbose)
+		return CMD_RET_SUCCESS;
+	if (gsc_ver == 3)
 		return CMD_RET_SUCCESS;
 
 	read_hwmon("Temp",     GSC_HWMON_TEMP, 2);
