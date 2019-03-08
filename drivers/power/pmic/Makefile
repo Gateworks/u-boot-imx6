@@ -26,6 +26,7 @@ obj-$(CONFIG_POWER_LTC3676) += pmic_ltc3676.o
 obj-$(CONFIG_POWER_MAX77696) += pmic_max77696.o
 obj-$(CONFIG_POWER_MAX8998) += pmic_max8998.o
 obj-$(CONFIG_POWER_MAX8997) += pmic_max8997.o
+obj-$(CONFIG_POWER_MP5416) += pmic_mp5416.o
 obj-$(CONFIG_POWER_MUIC_MAX8997) += muic_max8997.o
 obj-$(CONFIG_POWER_MAX77686) += pmic_max77686.o
 obj-$(CONFIG_POWER_PFUZE100) += pmic_pfuze100.o
