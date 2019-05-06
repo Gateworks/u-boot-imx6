@@ -615,6 +615,30 @@ static iomux_v3_cfg_t const gw5910_gpio_pads[] = {
 		   MUX_PAD_CTRL(PAD_CTL_PUS_100K_DOWN)),
 };
 
+static iomux_v3_cfg_t const gw5912_gpio_pads[] = {
+	/* SD3_VSELECT */
+	IOMUX_PADS(PAD_NANDF_CS1__GPIO6_IO14 | DIO_PAD_CFG),
+	/* RS232_EN# */
+	IOMUX_PADS(PAD_SD4_DAT3__GPIO2_IO11 | DIO_PAD_CFG),
+	/* CAN_STBY */
+	IOMUX_PADS(PAD_GPIO_2__GPIO1_IO02 | DIO_PAD_CFG),
+	/* PANLEDG# */
+	IOMUX_PADS(PAD_KEY_COL0__GPIO4_IO06 | DIO_PAD_CFG),
+	/* PANLEDR# */
+	IOMUX_PADS(PAD_KEY_ROW0__GPIO4_IO07 | DIO_PAD_CFG),
+	/* MX6_LOCLED# */
+	IOMUX_PADS(PAD_KEY_ROW4__GPIO4_IO15 | DIO_PAD_CFG),
+	/* USB_HUBRST# */
+	IOMUX_PADS(PAD_GPIO_19__GPIO4_IO05 | DIO_PAD_CFG),
+	/* PCI_RST# */
+	IOMUX_PADS(PAD_ENET_TXD1__GPIO1_IO29 | DIO_PAD_CFG),
+	/* PCIESKT_WDIS# */
+	IOMUX_PADS(PAD_GPIO_0__GPIO1_IO00 | DIO_PAD_CFG),
+	/* USB OTG_ID - add pull-down */
+	IOMUX_PADS(PAD_GPIO_1__USB_OTG_ID | \
+		   MUX_PAD_CTRL(PAD_CTL_PUS_100K_DOWN)),
+};
+
 /* Digital I/O */
 struct dio_cfg gw51xx_dio[] = {
 	{
@@ -1366,6 +1390,25 @@ struct ventana gpio_cfg[GW_UNKNOWN] = {
 		.mmc_cd = IMX_GPIO_NR(7, 0),
 		.nand = true,
 	},
+
+	/* GW5912 */
+	{
+		.gpio_pads = gw5912_gpio_pads,
+		.num_pads = ARRAY_SIZE(gw5912_gpio_pads)/2,
+		.dio_cfg = gw54xx_dio,
+		.dio_num = ARRAY_SIZE(gw54xx_dio),
+		.leds = {
+			IMX_GPIO_NR(4, 6),
+			IMX_GPIO_NR(4, 7),
+			IMX_GPIO_NR(4, 15),
+		},
+		.pcie_rst = IMX_GPIO_NR(1, 29),
+		.wdis = IMX_GPIO_NR(1, 0),
+		.rs232_en = GP_RS232_EN,
+		.vsel_pin = IMX_GPIO_NR(6, 14),
+		.mmc_cd = IMX_GPIO_NR(7, 0),
+		.nand = true,
+	},
 };
 
 #define SETUP_GPIO_OUTPUT(gpio, name, level) \
@@ -1874,6 +1917,7 @@ int board_mmc_init(bd_t *bis)
 	case GW54xx:
 	case GW553x:
 	case GW5910:
+	case GW5912:
 		/* usdhc3: 4bit microSD */
 		SETUP_IOMUX_PADS(usdhc3_pads);
 		usdhc_cfg[0].esdhc_base = USDHC3_BASE_ADDR;
