@@ -99,7 +99,7 @@ int gsc_info(int verbose)
 		gsc_i2c_write(GSC_SC_ADDR, GSC_SC_STATUS, 1,
 			      &buf[GSC_SC_STATUS], 1);
 	}
-	if (strncasecmp((const char*) ventana_info.model, "GW910", 6))
+	if (strncasecmp((const char *)ventana_info.model, "GW910", 5) == 0)
 		gsc_ver = 3;
 	else
 		gsc_ver = 2;
