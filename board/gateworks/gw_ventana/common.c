@@ -1062,6 +1062,7 @@ struct ventana gpio_cfg[GW_UNKNOWN] = {
 		.pcie_sson = IMX_GPIO_NR(1, 20),
 		.otgpwr_en = IMX_GPIO_NR(3, 22),
 		.mmc_cd = IMX_GPIO_NR(7, 0),
+		.wdis = -1,
 	},
 
 	/* GW51xx */
@@ -1244,6 +1245,7 @@ struct ventana gpio_cfg[GW_UNKNOWN] = {
 		},
 		.pcie_rst = IMX_GPIO_NR(1, 29),
 		.nand = true,
+		.wdis = -1,
 	},
 
 	/* GW5902 */
@@ -1258,6 +1260,7 @@ struct ventana gpio_cfg[GW_UNKNOWN] = {
 		.rs232_en = GP_RS232_EN,
 		.otgpwr_en = IMX_GPIO_NR(3, 23),
 		.nand = true,
+		.wdis = -1,
 	},
 
 	/* GW5903 */
@@ -1271,6 +1274,8 @@ struct ventana gpio_cfg[GW_UNKNOWN] = {
 		},
 		.otgpwr_en = IMX_GPIO_NR(4, 15),
 		.mmc_cd = IMX_GPIO_NR(6, 11),
+		.wdis = -1,
+		.pcie_rst = -1,
 	},
 
 	/* GW5904 */
@@ -1288,6 +1293,7 @@ struct ventana gpio_cfg[GW_UNKNOWN] = {
 		.mezz_pwren = IMX_GPIO_NR(2, 19),
 		.mezz_irq = IMX_GPIO_NR(2, 18),
 		.otgpwr_en = IMX_GPIO_NR(3, 22),
+		.wdis = -1,
 	},
 
 	/* GW5905 */
@@ -1370,6 +1376,7 @@ struct ventana gpio_cfg[GW_UNKNOWN] = {
 		.mezz_pwren = IMX_GPIO_NR(2, 19),
 		.mezz_irq = IMX_GPIO_NR(2, 18),
 		.otgpwr_en = IMX_GPIO_NR(3, 22),
+		.wdis = -1,
 	},
 
 	/* GW5910 */
@@ -1439,8 +1446,10 @@ void setup_iomux_gpio(int board, struct ventana_board_info *info)
 		gpio_cfg[board].pcie_rst = IMX_GPIO_NR(3, 23);
 
 	/* assert PCI_RST# */
-	gpio_request(gpio_cfg[board].pcie_rst, "pci_rst#");
-	gpio_direction_output(gpio_cfg[board].pcie_rst, 0);
+	if (gpio_cfg[board].pcie_rst != -1) {
+		gpio_request(gpio_cfg[board].pcie_rst, "pci_rst#");
+		gpio_direction_output(gpio_cfg[board].pcie_rst, 0);
+	}
 
 	/* turn off (active-high) user LED's */
 	for (i = 0; i < ARRAY_SIZE(gpio_cfg[board].leds); i++) {
@@ -1505,7 +1514,7 @@ void setup_iomux_gpio(int board, struct ventana_board_info *info)
 	}
 
 	/* PCISKT_WDIS# (Wireless disable GPIO to miniPCIe sockets) */
-	if (gpio_cfg[board].wdis) {
+	if (gpio_cfg[board].wdis != -1) {
 		gpio_request(gpio_cfg[board].wdis, "wlan_dis");
 		gpio_direction_output(gpio_cfg[board].wdis, 1);
 	}

@@ -513,7 +513,8 @@ int power_init_board(void)
 #if defined(CONFIG_CMD_PCI)
 int imx6_pcie_toggle_reset(void)
 {
-	if (board_type < GW_UNKNOWN) {
+	if ((board_type < GW_UNKNOWN) &&
+	    (gpio_cfg[board_type].pcie_rst != -1)) {
 		uint pin = gpio_cfg[board_type].pcie_rst;
 		gpio_request(pin, "pci_rst#");
 		gpio_direction_output(pin, 0);
