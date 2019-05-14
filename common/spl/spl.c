@@ -299,7 +299,11 @@ static int boot_from_devices(struct spl_image_info *spl_image,
 		loader = spl_ll_find_loader(spl_boot_list[i]);
 #if defined(CONFIG_SPL_SERIAL_SUPPORT) && defined(CONFIG_SPL_LIBCOMMON_SUPPORT)
 		if (loader)
+#if 0
 			printf("Trying to boot from %s\n", loader->name);
+#else
+			printf("%s", loader->name);
+#endif
 		else
 			puts("SPL: Unsupported Boot Device!\n");
 #endif
