@@ -1813,8 +1813,12 @@ static int mmc_probe(bd_t *bis)
 #else
 static int mmc_probe(bd_t *bis)
 {
+#if 0
 	if (board_mmc_init(bis) < 0)
 		cpu_mmc_init(bis);
+#else
+	board_mmc_init(bis);
+#endif
 
 	return 0;
 }
