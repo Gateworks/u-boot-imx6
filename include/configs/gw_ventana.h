@@ -188,6 +188,8 @@
 #define CONFIG_HIDE_LOGO_VERSION  /* Custom config to hide U-boot version */
 
 /* Miscellaneous configurable options */
+#undef CONFIG_SYS_CBSIZE
+#define CONFIG_SYS_CBSIZE               1024
 #define CONFIG_HWCONFIG
 #define CONFIG_PREBOOT
 
