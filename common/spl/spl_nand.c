@@ -111,9 +111,7 @@ static int spl_nand_load_image(struct spl_image_info *spl_image,
 		nand_spl_load_image(CONFIG_SYS_NAND_SPL_KERNEL_OFFS,
 			sizeof(*header), (void *)header);
 		err = spl_parse_image_header(spl_image, header);
-		if (err)
-			return err;
-		if (header->ih_os == IH_OS_LINUX) {
+		if (!err && (header->ih_os == IH_OS_LINUX)) {
 			/* happy - was a linux */
 			err = nand_spl_load_image(
 				CONFIG_SYS_NAND_SPL_KERNEL_OFFS,
