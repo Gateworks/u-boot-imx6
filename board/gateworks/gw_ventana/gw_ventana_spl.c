@@ -783,8 +783,10 @@ int spl_start_uboot(void)
 	i2c_set_bus_num(0);
 	gsc_i2c_read(0x50, 0x0, 1, &ret, 1);
 #endif
-	if (!ret)
+	if (!ret) {
+		printf(" (Falcon Mode) ");
 		gsc_boot_wd_disable();
+	}
 
 	debug("%s booting %s\n", __func__, ret ? "uboot" : "linux");
 	return ret;
