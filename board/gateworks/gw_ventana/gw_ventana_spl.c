@@ -696,16 +696,18 @@ void board_init_f(ulong dummy)
 	/* setup AXI */
 	gpr_init();
 
-	/* iomux and setup of uart/i2c */
+	/* iomux uart */
 	setup_iomux_uart();
-	setup_ventana_i2c(0);
-	setup_ventana_i2c(1);
 
 	/* setup GP timer */
 	timer_init();
 
 	/* UART clocks enabled and gd valid - init serial console */
 	preloader_console_init();
+
+	/* iomux and setup i2c */
+	setup_ventana_i2c(0);
+	setup_ventana_i2c(1);
 
 	/* read/validate EEPROM info to determine board model and SDRAM cfg */
 	board_model = read_eeprom(CONFIG_I2C_GSC, &ventana_info);
