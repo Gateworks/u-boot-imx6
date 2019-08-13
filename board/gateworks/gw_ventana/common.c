@@ -1874,6 +1874,12 @@ void setup_pmic(void)
 			/* set SW3 (VDD_ARM) */
 			pmic_reg_write(p, LTC3676_DVB3A, 0x1f);
 		}
+
+		/* put all switchers in continuous mode */
+		pmic_reg_write(p, LTC3676_BUCK1, 0xc0);
+		pmic_reg_write(p, LTC3676_BUCK2, 0xc0);
+		pmic_reg_write(p, LTC3676_BUCK3, 0xc0);
+		pmic_reg_write(p, LTC3676_BUCK4, 0xc0);
 	}
 
 	/* configure MP5416 PMIC
