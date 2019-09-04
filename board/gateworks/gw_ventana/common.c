@@ -1081,8 +1081,8 @@ struct dio_cfg gw5913_dio[] = {
 		0
 	},
 	{
-		{ IOMUX_PADS(PAD_SD2_DAT2__GPIO1_IO13) },
-		IMX_GPIO_NR(1, 13),
+		{ IOMUX_PADS(PAD_GPIO_19__GPIO4_IO05) },
+		IMX_GPIO_NR(4, 5),
 		{ 0, 0 },
 		0
 	},
