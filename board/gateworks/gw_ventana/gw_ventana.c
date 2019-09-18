@@ -1373,6 +1373,15 @@ int ft_board_setup(void *blob, bd_t *bd)
 		/* GW54xx-E adds WDOG2_B external reset */
 		if (rev < 'E')
 			ft_board_wdog_fixup(blob, WDOG2_ADDR);
+
+		/* GW54xx-G has an adv7280 instead of an adv7180 */
+		else if (rev > 'F') {
+			i = fdt_node_offset_by_compatible(blob, -1,
+							  "adi,adv7180");
+			if (i)
+				fdt_setprop(blob, i, "compatible",
+					    "adi,adv7280", 12);
+		}
 		break;
 
 	case GW551x:

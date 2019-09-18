@@ -319,6 +319,10 @@ static iomux_v3_cfg_t const gw54xx_gpio_pads[] = {
 	IOMUX_PADS(PAD_GPIO_1__USB_OTG_ID   | DIO_PAD_CFG),
 	IOMUX_PADS(PAD_KEY_COL4__USB_OTG_OC | DIO_PAD_CFG),
 	IOMUX_PADS(PAD_EIM_D22__GPIO3_IO22  | DIO_PAD_CFG),
+	/* J7_PWREN */
+	IOMUX_PADS(PAD_EIM_DA15__GPIO3_IO15 | DIO_PAD_CFG),
+	/* PCIEGBE_EN */
+	IOMUX_PADS(PAD_EIM_DA14__GPIO3_IO14 | DIO_PAD_CFG),
 };
 
 static iomux_v3_cfg_t const gw551x_gpio_pads[] = {
@@ -1606,6 +1610,12 @@ void setup_iomux_gpio(int board, struct ventana_board_info *info)
 	switch(board) {
 	case GW53xx:
 		gpio_request(IMX_GPIO_NR(3, 15), "j6_pwren");
+		gpio_direction_output(IMX_GPIO_NR(3, 15), 1);
+		gpio_request(IMX_GPIO_NR(3, 14), "gbe_en");
+		gpio_direction_output(IMX_GPIO_NR(3, 14), 1);
+		break;
+	case GW54xx:
+		gpio_request(IMX_GPIO_NR(3, 15), "j7_pwren");
 		gpio_direction_output(IMX_GPIO_NR(3, 15), 1);
 		gpio_request(IMX_GPIO_NR(3, 14), "gbe_en");
 		gpio_direction_output(IMX_GPIO_NR(3, 14), 1);
