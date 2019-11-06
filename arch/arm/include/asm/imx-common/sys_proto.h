@@ -79,7 +79,7 @@ enum imx6_bmode {
 	IMX6_BMODE_NAND,
 };
 
-static inline u8 imx6_is_bmode_from_gpr9(void)
+static inline u32 imx6_is_bmode_from_gpr9(void)
 {
 	return readl(&src_base->gpr10) & IMX6_SRC_GPR10_BMODE;
 }
