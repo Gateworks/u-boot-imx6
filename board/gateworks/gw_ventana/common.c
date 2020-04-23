@@ -366,8 +366,9 @@ static iomux_v3_cfg_t const gw552x_gpio_pads[] = {
 	IOMUX_PADS(PAD_GPIO_2__GPIO1_IO02 | DIO_PAD_CFG),
 	/* PCIESKT_WDIS# */
 	IOMUX_PADS(PAD_GPIO_17__GPIO7_IO12 | DIO_PAD_CFG),
-	/* USB OTG */
-	IOMUX_PADS(PAD_GPIO_1__USB_OTG_ID | DIO_PAD_CFG),
+	/* USB OTG_ID - add pull-down to default to host mode */
+	IOMUX_PADS(PAD_ENET_RX_ER__USB_OTG_ID | \
+		   MUX_PAD_CTRL(PAD_CTL_PUS_100K_DOWN)),
 };
 
 static iomux_v3_cfg_t const gw553x_gpio_pads[] = {
