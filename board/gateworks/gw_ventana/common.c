@@ -1481,8 +1481,8 @@ struct ventana gpio_cfg[GW_UNKNOWN] = {
 			IMX_GPIO_NR(4, 6),
 			IMX_GPIO_NR(4, 7),
 		},
-		.pcie_rst = IMX_GPIO_NR(1, 0),
-		.wdis = IMX_GPIO_NR(7, 12),
+		.pcie_rst = IMX_GPIO_NR(1, 29),
+		.wdis = IMX_GPIO_NR(1, 0),
 		.nand = true,
 	},
 };
