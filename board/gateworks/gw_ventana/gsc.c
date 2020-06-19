@@ -228,53 +228,12 @@ error:
 	return CMD_RET_FAILURE;
 }
 
-static int do_gsc_wd(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
-{
-	unsigned char reg;
-
-	if (argc < 2)
-		return CMD_RET_USAGE;
-
-	if (strcasecmp(argv[1], "enable") == 0) {
-		int timeout = 0;
-
-		if (argc > 2)
-			timeout = simple_strtoul(argv[2], NULL, 10);
-		i2c_set_bus_num(0);
-		if (gsc_i2c_read(GSC_SC_ADDR, GSC_SC_CTRL1, 1, &reg, 1))
-			return CMD_RET_FAILURE;
-		reg &= ~((1 << GSC_SC_CTRL1_WDEN) | (1 << GSC_SC_CTRL1_WDTIME));
-		if (timeout == 60)
-			reg |= (1 << GSC_SC_CTRL1_WDTIME);
-		else
-			timeout = 30;
-		reg |= (1 << GSC_SC_CTRL1_WDEN);
-		if (gsc_i2c_write(GSC_SC_ADDR, GSC_SC_CTRL1, 1, &reg, 1))
-			return CMD_RET_FAILURE;
-		printf("GSC Watchdog enabled with timeout=%d seconds\n",
-		       timeout);
-	} else if (strcasecmp(argv[1], "disable") == 0) {
-		i2c_set_bus_num(0);
-		if (gsc_i2c_read(GSC_SC_ADDR, GSC_SC_CTRL1, 1, &reg, 1))
-			return CMD_RET_FAILURE;
-		reg &= ~((1 << GSC_SC_CTRL1_WDEN) | (1 << GSC_SC_CTRL1_WDTIME));
-		if (gsc_i2c_write(GSC_SC_ADDR, GSC_SC_CTRL1, 1, &reg, 1))
-			return CMD_RET_FAILURE;
-		printf("GSC Watchdog disabled\n");
-	} else {
-		return CMD_RET_USAGE;
-	}
-	return CMD_RET_SUCCESS;
-}
-
 static int do_gsc(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
 	if (argc < 2)
 		return gsc_info(1);
 
-	if (strcasecmp(argv[1], "wd") == 0)
-		return do_gsc_wd(cmdtp, flag, --argc, ++argv);
-	else if (strcasecmp(argv[1], "sleep") == 0)
+	if (strcasecmp(argv[1], "sleep") == 0)
 		return do_gsc_sleep(cmdtp, flag, --argc, ++argv);
 
 	return CMD_RET_USAGE;
@@ -282,7 +241,7 @@ static int do_gsc(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 
 U_BOOT_CMD(
 	gsc, 4, 1, do_gsc, "GSC configuration",
-	"[wd enable [30|60]]|[wd disable]|[sleep <secs>]\n"
+	"[sleep <secs>]\n"
 	);
 
 #endif /* CONFIG_CMD_GSC */
