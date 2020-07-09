@@ -1830,7 +1830,7 @@ void setup_pmic(void)
 			reg |= (SWBST_5_00V | (SWBST_MODE_AUTO << SWBST_MODE_SHIFT));
 			pmic_reg_write(p, PFUZE100_SWBSTCON1, reg);
 
-			if ( (board == GW54xx) && (rev >= 'G') ) {
+			if ( (board == GW54xx) && (rev == 'G') ) {
 				/* Disable VGEN5 */
 				pmic_reg_write(p, PFUZE100_VGEN5VOL, 0);
 
