@@ -1941,6 +1941,7 @@ void setup_pmic(void)
 		pmic_reg_write(p, LTC3676_BUCK4, 0xc0);
 	}
 
+#if defined(CONFIG_POWER_MP5416)
 	/* configure MP5416 PMIC
 	 *  - 4x buck regulators (auto PFM/PWM vs forced PWM selectable)
 	 *  - 5x LDO regulators
@@ -1962,6 +1963,7 @@ void setup_pmic(void)
 		reg = MP5416_VSET_EN | 0x1B; /* 1.475 */
 		pmic_reg_write(p, MP5416_VSET_SW4, reg);
 	}
+#endif // MP5416
 
 #if 1
 #define CONFIG_POWER_ISL9238_I2C_ADDR	0x09
