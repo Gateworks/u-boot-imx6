@@ -305,8 +305,21 @@ static void enable_hdmi(struct display_info_t const *dev)
 	imx_enable_hdmi_phy();
 }
 
-static int detect_i2c(struct display_info_t const *dev)
+static int detect_lvds(struct display_info_t const *dev)
 {
+	/* only the following boards support LVDS connectors */
+	switch (board_type) {
+	case GW52xx:
+	case GW53xx:
+	case GW54xx:
+	case GW560x:
+	case GW5905:
+	case GW5909:
+		break;
+	default:
+		return 0;
+	}
+
 	return i2c_set_bus_num(dev->bus) == 0 &&
 		i2c_probe(dev->addr) == 0;
 }
@@ -321,9 +334,27 @@ static void enable_lvds(struct display_info_t const *dev)
 	reg |= IOMUXC_GPR2_DATA_WIDTH_CH0_24BIT;
 	writel(reg, &iomux->gpr[2]);
 
-	/* Enable Backlight */
-	gpio_request(IMX_GPIO_NR(1, 10), "bklt_gpio");
-	gpio_direction_output(IMX_GPIO_NR(1, 10), 0);
+	/* Configure GPIO */
+	switch (board_type) {
+	case GW52xx:
+	case GW53xx:
+	case GW54xx:
+		if (!strncmp(dev->mode.name, "Hannstar", 8)) {
+			SETUP_IOMUX_PAD(PAD_SD2_CLK__GPIO1_IO10 | DIO_PAD_CFG);
+			gpio_request(IMX_GPIO_NR(1, 10), "cabc");
+			gpio_direction_output(IMX_GPIO_NR(1, 10), 0);
+		}
+		else if (!strncmp(dev->mode.name, "DLC", 3)) {
+			SETUP_IOMUX_PAD(PAD_SD2_CLK__GPIO1_IO10 | DIO_PAD_CFG);
+			gpio_request(IMX_GPIO_NR(1, 10), "touch_rst#");
+			gpio_direction_output(IMX_GPIO_NR(1, 10), 1);
+		}
+		break;
+	default:
+		break;
+	}
+
+	/* Configure Backlight */
 	gpio_request(IMX_GPIO_NR(1, 18), "bklt_en");
 	SETUP_IOMUX_PAD(PAD_SD1_CMD__GPIO1_IO18 | DIO_PAD_CFG);
 	gpio_direction_output(IMX_GPIO_NR(1, 18), 1);
@@ -355,7 +386,7 @@ struct display_info_t const displays[] = {{
 	.bus	= 2,
 	.addr	= 0x4,
 	.pixfmt	= IPU_PIX_FMT_LVDS666,
-	.detect	= detect_i2c,
+	.detect	= detect_lvds,
 	.enable	= enable_lvds,
 	.mode	= {
 		.name           = "Hannstar-XGA",
@@ -372,31 +403,10 @@ struct display_info_t const displays[] = {{
 		.sync           = FB_SYNC_EXT,
 		.vmode          = FB_VMODE_NONINTERLACED
 } }, {
-	/* DLC700JMG-T-4 */
+	/* DLC0700XDP21LF-C-1 */
 	.bus	= 2,
 	.addr	= 0x38,
-	.detect	= NULL,
-	.enable	= enable_lvds,
-	.pixfmt	= IPU_PIX_FMT_LVDS666,
-	.mode	= {
-		.name           = "DLC700JMGT4",
-		.refresh        = 60,
-		.xres           = 1024,		/* 1024x600active pixels */
-		.yres           = 600,
-		.pixclock       = 15385,	/* 64MHz */
-		.left_margin    = 220,
-		.right_margin   = 40,
-		.upper_margin   = 21,
-		.lower_margin   = 7,
-		.hsync_len      = 60,
-		.vsync_len      = 10,
-		.sync           = FB_SYNC_EXT,
-		.vmode          = FB_VMODE_NONINTERLACED
-} }, {
-	/* DLC0700XDP21LF-C-1 */
-	.bus	= 0,
-	.addr	= 0,
-	.detect	= NULL,
+	.detect	= detect_lvds,
 	.enable	= enable_lvds,
 	.pixfmt	= IPU_PIX_FMT_LVDS666,
 	.mode	= {
@@ -414,10 +424,31 @@ struct display_info_t const displays[] = {{
 		.sync           = FB_SYNC_EXT,
 		.vmode          = FB_VMODE_NONINTERLACED
 } }, {
+	/* DLC700JMG-T-4 */
+	.bus	= 2,
+	.addr	= 0x38,
+	.detect	= detect_lvds,
+	.enable	= enable_lvds,
+	.pixfmt	= IPU_PIX_FMT_LVDS666,
+	.mode	= {
+		.name           = "DLC700JMGT4",
+		.refresh        = 60,
+		.xres           = 1024,		/* 1024x600active pixels */
+		.yres           = 600,
+		.pixclock       = 15385,	/* 64MHz */
+		.left_margin    = 220,
+		.right_margin   = 40,
+		.upper_margin   = 21,
+		.lower_margin   = 7,
+		.hsync_len      = 60,
+		.vsync_len      = 10,
+		.sync           = FB_SYNC_EXT,
+		.vmode          = FB_VMODE_NONINTERLACED
+} }, {
 	/* DLC800FIG-T-3 */
 	.bus	= 2,
 	.addr	= 0x14,
-	.detect	= NULL,
+	.detect	= detect_lvds,
 	.enable	= enable_lvds,
 	.pixfmt	= IPU_PIX_FMT_LVDS666,
 	.mode	= {
@@ -437,7 +468,7 @@ struct display_info_t const displays[] = {{
 } }, {
 	.bus	= 2,
 	.addr	= 0x5d,
-	.detect	= detect_i2c,
+	.detect	= detect_lvds,
 	.enable	= enable_lvds,
 	.pixfmt	= IPU_PIX_FMT_LVDS666,
 	.mode	= {
@@ -505,10 +536,6 @@ static void setup_display(void)
 	    | (IOMUXC_GPR3_MUX_SRC_IPU1_DI0
 	       <<IOMUXC_GPR3_LVDS0_MUX_CTL_OFFSET);
 	writel(reg, &iomux->gpr[3]);
-
-	/* LVDS Backlight GPIO on LVDS connector - output low */
-	SETUP_IOMUX_PAD(PAD_SD2_CLK__GPIO1_IO10 | DIO_PAD_CFG);
-	gpio_direction_output(IMX_GPIO_NR(1, 10), 0);
 }
 #endif /* CONFIG_VIDEO_IPUV3 */
 

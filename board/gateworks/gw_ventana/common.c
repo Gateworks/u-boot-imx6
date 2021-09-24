@@ -1668,7 +1668,7 @@ void setup_iomux_gpio(int board, struct ventana_board_info *info)
 		break;
 	case GW5905:
 		SETUP_GPIO_OUTPUT(IMX_GPIO_NR(1, 7), "usb_pcisel", 0);
-		SETUP_GPIO_OUTPUT(IMX_GPIO_NR(1, 9), "lvds_cabc", 1);
+		SETUP_GPIO_OUTPUT(IMX_GPIO_NR(1, 9), "lvds_backlight", 1);
 		SETUP_GPIO_OUTPUT(IMX_GPIO_NR(1, 14), "mipi_pdwn", 1);
 		SETUP_GPIO_OUTPUT(IMX_GPIO_NR(1, 15), "mipi_rst#", 0);
 		SETUP_GPIO_OUTPUT(IMX_GPIO_NR(2, 3), "emmy_pdwn#", 1);
