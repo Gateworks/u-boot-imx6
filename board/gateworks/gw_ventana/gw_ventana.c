@@ -29,6 +29,7 @@
 #include <linux/ctype.h>
 #include <miiphy.h>
 #include <mtd_node.h>
+#include <nand.h>
 #include <netdev.h>
 #include <pci.h>
 #include <power/pmic.h>
@@ -797,6 +798,25 @@ int misc_init_r(void)
 		const char *cputype = "";
 
 		/*
+		 * Nand FLASH ubi/ubifs layout is a function of page size.
+		 * Gateworks uses a 2048 byte page size geometry it names 'normal'
+		 * and a 4096 page size geometry it names 'large'.
+		 */
+		if (nand_info[0]) {
+			switch (nand_info[0]->writesize) {
+			case 2048:
+				setenv("flash_layout", "normal");
+				break;
+			case 4096:
+				setenv("flash_layout", "large");
+				break;
+			default:
+				setenv("flash_layout", "unknown");
+				break;
+			}
+		}
+
+		/*
 		 * FDT name will be prefixed with CPU type.  Three versions
 		 * will be created each increasingly generic and bootloader
 		 * env scripts will try loading each from most specific to
@@ -809,10 +829,6 @@ int misc_init_r(void)
 			 is_cpu_type(MXC_CPU_MX6SOLO))
 			cputype = "imx6dl";
 		setenv("soctype", cputype);
-		if (8 << (ventana_info.nand_flash_size-1) >= 2048)
-			setenv("flash_layout", "large");
-		else
-			setenv("flash_layout", "normal");
 		memset(str, 0, sizeof(str));
 		for (i = 0; i < (sizeof(str)-1) && info->model[i]; i++)
 			str[i] = tolower(info->model[i]);
