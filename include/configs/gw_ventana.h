@@ -324,6 +324,12 @@
 				"bootm; " \
 			"fi; " \
 		"fi\0" \
+	"net_boot=" \
+		"setenv fsload tftpboot; " \
+		"setenv bootargs console=ttymxc1,115200; " \
+		"setenv bootdir ventana; " \
+		"run loadfdt && $fsload $loadaddr $bootdir/uImage " \
+			"&& bootm $loadaddr - $fdt_addr\0" \
 	"usb_boot=" \
 		"setenv fsload \"${fs}load usb ${disk}:${part}\"; " \
 		"usb start && usb dev ${disk} && " \
